@@ -14,6 +14,7 @@ import time
 import sqlite3
 from hashlib import md5
 from datetime import datetime
+from datetime import datetime, timezone  # Add timezone to imports at the top
 from contextlib import closing
 from flask import Flask, request, session, url_for, redirect, \
      render_template, abort, g, flash
@@ -60,7 +61,7 @@ def get_user_id(username):
 
 def format_datetime(timestamp):
     """Format a timestamp for display."""
-    return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d @ %H:%M')
+    return datetime.fromtimestamp(timestamp, timezone.utc).strftime('%Y-%m-%d @ %H:%M')
 
 
 def gravatar_url(email, size=80):
