@@ -12,5 +12,13 @@ $ source venv/bin/activate
 ```bash
 $ pip install -r requirements.txt
 ```
+### Branches prefixes
 
+To keep the branches organized, we will use the following prefixes:
+
+| Branch purpose | Prefix |
+|---|---|
+| Refactor of feature | `refactor/` |
+| Creating new feature | `feature/`|
+| Feature enhancment | `enhancement/`|
 
