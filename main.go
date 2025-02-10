@@ -31,6 +31,13 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", timeline).Methods("GET")
 	r.HandleFunc("/public", public_timeline).Methods("GET")
+	r.HandleFunc("/{username}", user_timeline).Methods("GET")
+	r.HandleFunc("/{username}/follow", follow_user).Methods("GET")
+	r.HandleFunc("/{username}/unfollow", unfollow_user).Methods("GET")
+	r.HandleFunc("/add_message", add_message).Methods("POST")
+	r.HandleFunc("/login", login).Methods("GET", "POST")
+	r.HandleFunc("/register", register).Methods("GET", "POST")
+	r.HandleFunc("/logout", logout).Methods("GET")
 
 	port := ":8080"
 	log.Println("Server running on http://localhost" + port)
@@ -75,31 +82,34 @@ func public_timeline(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
-func user_timeline() {
+func user_timeline(w http.ResponseWriter, r *http.Request) {
+	// TODO: not done yet. as of now, we can get the username from the URL
+	vars := mux.Vars(r) // gets the variables from the URL
+	username := vars["username"]
+	println("User timeline of " + username)
+}
+
+func follow_user(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
-func follow_user() {
+func add_message(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
-func add_message() {
+func unfollow_user(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
-func unfollow_user() {
+func login(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
-func login() {
+func register(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
-func register() {
-	// TODO
-}
-
-func logout() {
+func logout(w http.ResponseWriter, r *http.Request) {
 	// TODO
 }
 
