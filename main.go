@@ -1,11 +1,15 @@
 package main
 
 import (
+	"crypto/md5"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
@@ -25,9 +29,8 @@ func main() {
 	defer db.Close()
 
 	r := mux.NewRouter()
-	r.HandleFunc("/", timeline)
-
-	r.HandleFunc("/public", public_timeline)
+	r.HandleFunc("/", timeline).Methods("GET")
+	r.HandleFunc("/public", public_timeline).Methods("GET")
 
 	port := ":8080"
 	log.Println("Server running on http://localhost" + port)
@@ -43,18 +46,22 @@ func connect_db() sql.DB {
 }
 
 func query_db() {
-	// TODO
+
 }
 
 func get_user_id() {
 	// TODO
 }
 
-func format_datetime() {
-	// TODO
+func format_datetime(timestamp int64) string {
+	// Format the date and time
+	return time.Unix(timestamp, 0).Format("02-01-2006 15:04:05") // dd-mm-yyyy hh:mm:ss
 }
-func gravatar_url() {
-	// TODO
+func gravatar_url(email string, size int) string {
+	// Return the gravatar image for the given email address.
+	hash := md5.New()
+	hash.Write([]byte(strings.ToLower(email)))
+	return fmt.Sprintf("http://www.gravatar.com/avatar/%s?d=identicon&s=%d", hex.EncodeToString(hash.Sum(nil)), size)
 }
 
 func before_request() {} // mabIs also not need since we have db in as public variable
