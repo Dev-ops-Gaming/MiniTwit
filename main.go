@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -52,12 +53,73 @@ func connect_db() sql.DB {
 	return *db
 }
 
-func query_db() {
-
+func init_db() {
+	// Creates the database tables.
+	db := connect_db()
+	file, err := os.ReadFile("schema.sql")
+	if err != nil {
+		log.Fatalf("Failed to read sql script: %v", err)
+	}
+	fileAsString := string(file)
+	_, err = db.Exec(fileAsString)
+	if err != nil {
+		log.Fatalf("Failed to create the database tables: %v", err)
+	}
+	//orig code uses .commit(). Are our changes commited?
+	//it does not insert values. where did we get those?
 }
 
-func get_user_id() {
-	// TODO
+// 'one=false', Golang does not support optional/default parameters
+// return type interface{}/any as two diff maps can be returned
+// https://stackoverflow.com/questions/35657362/how-to-return-dynamic-type-struct-in-golang
+// IMPORTANT - must use switch case to handle return from this method! Check testDB() for examples!
+func query_db(query string, args []any, one bool) any {
+	// Queries the database and returns a list of dictionaries.
+	db := connect_db()
+	cur, err := db.Query(query, args...)
+	if err != nil {
+		log.Fatalf("Failed query the database: %v", err)
+	}
+
+	var rv = map[int]map[string]any{}
+	var i int = 0
+	//for every row
+	for cur.Next() {
+		//make map[col]value
+		rv[i] = make(map[string]any)
+		var val any
+		//for each col, insert value in map[col]value
+		cols, _ := cur.Columns()
+		for _, col := range cols {
+			err := cur.Scan(&val)
+			if err != nil {
+				fmt.Println(err)
+			}
+			rv[i][col] = val
+		}
+		i += 1
+	}
+	//fmt.Println(rv[0]["username"])
+	if one {
+		return rv[0]
+	} else {
+		return rv
+	}
+}
+
+// either return pair or 'any'?
+func get_user_id(username string) (int, any) {
+	// Convenience method to look up the id for a username.
+	db := connect_db()
+	var userId int
+	// use .QueryRow to handle possible empty results
+	if err := db.QueryRow("select user_id from user where username = ?", username).Scan(&userId); err == sql.ErrNoRows {
+		//empty result
+		return 0, err
+	} else {
+		//got smth
+		return userId, nil
+	}
 }
 
 func format_datetime(timestamp int64) string {
@@ -120,7 +182,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	}
 }
 
-//aadd jinja stuff?
+//add jinja stuff?
 
 func testDb() {
 	// Test the connection
@@ -139,4 +201,20 @@ func testDb() {
 	}
 
 	fmt.Println("Connected to the database successfully!")
+
+	// --- Example for query_db() ---
+	args := []any{} //empty collection of 'any'
+	var res = query_db("SELECT username FROM user", args, true)
+
+	//type conversion
+	// https://stackoverflow.com/questions/47496040/type-interface-does-not-support-indexing-in-golang
+
+	// switch cases to handle 'any' return type from query_db()
+	switch res := res.(type) {
+	case map[int]map[string]any:
+		fmt.Println(res)
+	case map[string]any:
+		fmt.Println("got username:")
+		fmt.Println(res["username"])
+	}
 }
