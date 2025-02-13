@@ -44,6 +44,8 @@ type Message struct {
 	PubDate string
 }
 
+// Runner
+
 func main() {
 	// Db logic
 	db = connectDB()
@@ -52,6 +54,7 @@ func main() {
 	// Routes
 	r := mux.NewRouter()
 	r.HandleFunc("/", timelineHandler).Methods("GET")
+	r.HandleFunc("/{username}", userTimelineHandler).Methods("GET")
 
 	// Serve static files
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -60,6 +63,8 @@ func main() {
 	fmt.Println("Server is running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
+
+// General functions
 
 func connectDB() *sql.DB {
 	db, err := sql.Open("sqlite3", DATABASE)
@@ -88,11 +93,12 @@ func getGravatar(email string, size int) string {
 	return fmt.Sprintf("http://www.gravatar.com/avatar/%s?d=identicon&s=%d", hex.EncodeToString(hash.Sum(nil)), size)
 }
 
+// Handlers
+
 func timelineHandler(w http.ResponseWriter, r *http.Request) {
 	messages, err := queryTimeline()
 	if err != nil {
 		http.Error(w, "Failed to load timeline", http.StatusInternalServerError)
-		fmt.Printf("Failed to load timeline: %v\n", err)
 		return
 	}
 
@@ -104,9 +110,30 @@ func timelineHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, "Failed to render template", http.StatusInternalServerError)
-		fmt.Printf("Failed to render template: %v\n", err)
 	}
 }
+
+func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	username := vars["username"]
+	messages, err := queryUserTimeline(username)
+	if err != nil {
+		http.Error(w, "Failed to load user timeline", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Messages []Message
+	}{
+		Messages: messages,
+	}
+
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+	}
+}
+
+//Query functions
 
 func queryTimeline() ([]Message, error) {
 	rows, err := queryDB(`
@@ -127,6 +154,33 @@ func queryTimeline() ([]Message, error) {
 		var pubDate int64
 		err := rows.Scan(&m.ID, &m.Author, &m.Content, &pubDate, &m.Email)
 		m.PubDate = formatTime(pubDate) // Convert timestamp from UNIX to readable format
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, m)
+	}
+	return messages, nil
+}
+
+func queryUserTimeline(username string) ([]Message, error) {
+	rows, err := queryDB(`
+		SELECT message.author_id, user.username, message.text, message.pub_date, user.email
+		FROM message
+		JOIN user ON message.author_id = user.user_id
+		WHERE user.username = ? AND message.flagged = 0
+		ORDER BY message.pub_date DESC
+		LIMIT ?`, username, PER_PAGE)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var m Message
+		var pubDate int64
+		err := rows.Scan(&m.ID, &m.Author, &m.Content, &pubDate, &m.Email)
+		m.PubDate = formatTime(pubDate)
 		if err != nil {
 			return nil, err
 		}

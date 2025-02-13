@@ -5,7 +5,7 @@
                 <li>
                     <img src="{{ getGravatar .Email 40 }}" alt="Gravatar">
                     <p>
-                        <strong><a href="/">{{ .Author }}</a></strong>
+                        <strong><a href="/{{ .Author }}">{{ .Author }}</a></strong>
                         {{ .Content }}
                         <small>&mdash; {{ .PubDate }}</small>
                     </p>
