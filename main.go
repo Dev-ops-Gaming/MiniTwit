@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -18,203 +17,120 @@ import (
 
 const (
 	DATABASE   = "./minitwit.db"
-	PER_PAGE   = 30
+	PER_PAGE   = 32
 	SECRET_KEY = "development key"
 )
 
-var db *sql.DB
-var templates = template.Must(template.ParseGlob("templates/*.html"))
+var (
+	db   *sql.DB
+	tmpl = template.Must(template.New("layout.html").Funcs(template.FuncMap{
+		"getGravatar": getGravatar, // Register the getGravatar function with the template - ugly but can't find a better way
+	}).ParseFiles("templates/layout.html", "templates/timeline.html"))
+)
 
-func main() {
-	db := connect_db() // Connect to the database
-	defer db.Close()
-
-	r := mux.NewRouter()
-	r.HandleFunc("/", timeline).Methods("GET")
-	r.HandleFunc("/public", public_timeline).Methods("GET")
-	r.HandleFunc("/{username}", user_timeline).Methods("GET")
-	r.HandleFunc("/{username}/follow", follow_user).Methods("GET")
-	r.HandleFunc("/{username}/unfollow", unfollow_user).Methods("GET")
-	r.HandleFunc("/add_message", add_message).Methods("POST")
-	r.HandleFunc("/login", login).Methods("GET", "POST")
-	r.HandleFunc("/register", register).Methods("GET", "POST")
-	r.HandleFunc("/logout", logout).Methods("GET")
-
-	port := ":8080"
-	log.Println("Server running on http://localhost" + port)
-	log.Fatal(http.ListenAndServe(port, r))
+// currently unused
+type User struct {
+	ID       int
+	Username string
+	Email    string
+	PwHash   string
 }
 
-func connect_db() sql.DB {
+type Message struct {
+	ID      int
+	Author  string
+	Email   string
+	Content string
+	PubDate string
+}
+
+func main() {
+	// Db logic
+	db = connectDB()
+	defer db.Close()
+
+	// Routes
+	r := mux.NewRouter()
+	r.HandleFunc("/", timelineHandler).Methods("GET")
+
+	// Serve static files
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// Start the server
+	fmt.Println("Server is running on http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", r))
+}
+
+func connectDB() *sql.DB {
 	db, err := sql.Open("sqlite3", DATABASE)
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
-	return *db
+	return db
 }
 
-func init_db() {
-	// Creates the database tables.
-	db := connect_db()
-	file, err := os.ReadFile("schema.sql")
+func queryDB(query string, args ...interface{}) (*sql.Rows, error) {
+	rows, err := db.Query(query, args...)
 	if err != nil {
-		log.Fatalf("Failed to read sql script: %v", err)
+		return nil, err
 	}
-	fileAsString := string(file)
-	_, err = db.Exec(fileAsString)
-	if err != nil {
-		log.Fatalf("Failed to create the database tables: %v", err)
-	}
-	//orig code uses .commit(). Are our changes commited?
-	//it does not insert values. where did we get those?
+	return rows, nil
 }
 
-// 'one=false', Golang does not support optional/default parameters
-// return type interface{}/any as two diff maps can be returned
-// https://stackoverflow.com/questions/35657362/how-to-return-dynamic-type-struct-in-golang
-// IMPORTANT - must use switch case to handle return from this method! Check testDB() for examples!
-func query_db(query string, args []any, one bool) any {
-	// Queries the database and returns a list of dictionaries.
-	db := connect_db()
-	cur, err := db.Query(query, args...)
-	if err != nil {
-		log.Fatalf("Failed query the database: %v", err)
-	}
-
-	var rv = map[int]map[string]any{}
-	var i int = 0
-	//for every row
-	for cur.Next() {
-		//make map[col]value
-		rv[i] = make(map[string]any)
-		var val any
-		//for each col, insert value in map[col]value
-		cols, _ := cur.Columns()
-		for _, col := range cols {
-			err := cur.Scan(&val)
-			if err != nil {
-				fmt.Println(err)
-			}
-			rv[i][col] = val
-		}
-		i += 1
-	}
-	//fmt.Println(rv[0]["username"])
-	if one {
-		return rv[0]
-	} else {
-		return rv
-	}
+func formatTime(timestamp int64) string {
+	return time.Unix(timestamp, 0).Format("02-01-2006 15:04:05")
 }
 
-// either return pair or 'any'?
-func get_user_id(username string) (int, any) {
-	// Convenience method to look up the id for a username.
-	db := connect_db()
-	var userId int
-	// use .QueryRow to handle possible empty results
-	if err := db.QueryRow("select user_id from user where username = ?", username).Scan(&userId); err == sql.ErrNoRows {
-		//empty result
-		return 0, err
-	} else {
-		//got smth
-		return userId, nil
-	}
-}
-
-func format_datetime(timestamp int64) string {
-	// Format the date and time
-	return time.Unix(timestamp, 0).Format("02-01-2006 15:04:05") // dd-mm-yyyy hh:mm:ss
-}
-func gravatar_url(email string, size int) string {
+func getGravatar(email string, size int) string {
 	// Return the gravatar image for the given email address.
 	hash := md5.New()
 	hash.Write([]byte(strings.ToLower(email)))
 	return fmt.Sprintf("http://www.gravatar.com/avatar/%s?d=identicon&s=%d", hex.EncodeToString(hash.Sum(nil)), size)
 }
 
-func before_request() {} // mabIs also not need since we have db in as public variable
-
-func timeline(w http.ResponseWriter, r *http.Request) {
-	// TODO: we need to pass the data to renderTemplate
-	renderTemplate(w, "test.html", nil)
-}
-
-func public_timeline(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func user_timeline(w http.ResponseWriter, r *http.Request) {
-	// TODO: not done yet. as of now, we can get the username from the URL
-	vars := mux.Vars(r) // gets the variables from the URL
-	username := vars["username"]
-	println("User timeline of " + username)
-}
-
-func follow_user(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func add_message(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func unfollow_user(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func login(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func register(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func logout(w http.ResponseWriter, r *http.Request) {
-	// TODO
-}
-
-func renderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
-	err := templates.ExecuteTemplate(w, tmpl, data)
+func timelineHandler(w http.ResponseWriter, r *http.Request) {
+	messages, err := queryTimeline()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to load timeline", http.StatusInternalServerError)
+		fmt.Printf("Failed to load timeline: %v\n", err)
+		return
+	}
+
+	data := struct {
+		Messages []Message
+	}{
+		Messages: messages,
+	}
+
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		fmt.Printf("Failed to render template: %v\n", err)
 	}
 }
 
-//add jinja stuff?
-
-func testDb() {
-	// Test the connection
-	data, err := db.Query("select username from user")
+func queryTimeline() ([]Message, error) {
+	rows, err := queryDB(`
+		SELECT message.author_id, user.username, message.text, message.pub_date, user.email
+		FROM message
+		JOIN user ON message.author_id = user.user_id
+		WHERE message.flagged = 0
+		ORDER BY message.pub_date DESC
+		LIMIT ?`, PER_PAGE)
 	if err != nil {
-		log.Fatalf("Failed to ping the database: %v", err)
+		return nil, err
 	}
+	defer rows.Close()
 
-	for data.Next() {
-		var user string
-		err := data.Scan(&user)
+	var messages []Message
+	for rows.Next() {
+		var m Message
+		var pubDate int64
+		err := rows.Scan(&m.ID, &m.Author, &m.Content, &pubDate, &m.Email)
+		m.PubDate = formatTime(pubDate) // Convert timestamp from UNIX to readable format
 		if err != nil {
-			fmt.Println(err)
+			return nil, err
 		}
-		fmt.Println(user)
+		messages = append(messages, m)
 	}
-
-	fmt.Println("Connected to the database successfully!")
-
-	// --- Example for query_db() ---
-	args := []any{} //empty collection of 'any'
-	var res = query_db("SELECT username FROM user", args, true)
-
-	//type conversion
-	// https://stackoverflow.com/questions/47496040/type-interface-does-not-support-indexing-in-golang
-
-	// switch cases to handle 'any' return type from query_db()
-	switch res := res.(type) {
-	case map[int]map[string]any:
-		fmt.Println(res)
-	case map[string]any:
-		fmt.Println("got username:")
-		fmt.Println(res["username"])
-	}
+	return messages, nil
 }
