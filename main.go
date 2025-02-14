@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -26,6 +27,8 @@ var (
 	tmpl = template.Must(template.New("layout.html").Funcs(template.FuncMap{
 		"getGravatar": getGravatar, // Register the getGravatar function with the template - ugly but can't find a better way
 	}).ParseFiles("templates/layout.html", "templates/timeline.html"))
+	registerTmpl = template.Must(template.ParseFiles("templates/layout.html", "templates/register.html"))
+	store        = sessions.NewCookieStore([]byte(SECRET_KEY))
 )
 
 // currently unused
@@ -54,6 +57,9 @@ func main() {
 	// Routes
 	r := mux.NewRouter()
 	r.HandleFunc("/", timelineHandler).Methods("GET")
+	r.HandleFunc("/register", registerHandler).Methods("GET", "POST")
+	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
+	r.HandleFunc("/logout", logoutHandler).Methods("GET")
 	r.HandleFunc("/{username}", userTimelineHandler).Methods("GET")
 
 	// Serve static files
@@ -133,6 +139,48 @@ func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		if err := registerTmpl.Execute(w, nil); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		}
+	}
+	if r.Method == "POST" {
+		username := r.FormValue("username")
+		email := r.FormValue("email")
+		password := r.FormValue("password")
+		password2 := r.FormValue("password2")
+
+		// input validation
+		if username == "" || email == "" || password == "" {
+			http.Error(w, "You must fill out all fields", http.StatusBadRequest)
+		}
+
+		// Check if repeated password matches
+		if password != password2 {
+			http.Error(w, "Passwords do not match", http.StatusBadRequest)
+		}
+
+		//check if user already exists
+		_, err := getUserFromDb(username)
+		if err == nil {
+			http.Error(w, "User already exists", http.StatusBadRequest)
+		}
+
+		// hash the password
+		hash := md5.New()
+		hash.Write([]byte(password))
+		pwHash := hex.EncodeToString(hash.Sum(nil))
+
+		// insert the user into the database
+		_, err = db.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", username, email, pwHash)
+
+		// redirect to timeline
+		http.Redirect(w, r, "/", http.StatusFound)
+		//TODO: REMEMBER TO ADD COOKIE
+	}
+}
+
 //Query functions
 
 func queryTimeline() ([]Message, error) {
@@ -187,4 +235,72 @@ func queryUserTimeline(username string) ([]Message, error) {
 		messages = append(messages, m)
 	}
 	return messages, nil
+}
+
+func getUserFromDb(username string) (User, error) {
+	var u User
+	row := db.QueryRow("SELECT * FROM user WHERE username = ?", username)
+	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PwHash)
+	if err != nil {
+		return u, err
+	}
+	return u, nil
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	store, _ := store.Get(r, "minitwit-session")
+
+	if r.Method == "GET" {
+		if store.Values["user_id"] != nil {
+			http.Redirect(w, r, "/", http.StatusFound)
+		}
+		loginTmpl := template.Must(template.ParseFiles("templates/layout.html", "templates/login.html"))
+		if err := loginTmpl.Execute(w, nil); err != nil {
+			http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if r.Method == "POST" {
+		// Get input from form
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		//check if user exists
+		user, err := getUserFromDb(username)
+		if err != nil {
+			http.Error(w, "Error getting user from db", http.StatusInternalServerError)
+			fmt.Println("Error getting user from db")
+			return
+		}
+
+		// compare the given password with the hashed password in the database
+		hash := md5.New()
+		hash.Write([]byte(password))
+		pwHash := hex.EncodeToString(hash.Sum(nil))
+
+		if pwHash != user.PwHash {
+			http.Error(w, "Invalid password", http.StatusBadRequest)
+			fmt.Println("Invalid password")
+			return
+		}
+
+		// Set session values
+		store.Values["user_id"] = user.ID
+		err = store.Save(r, w)
+
+		// Redirect to timeline
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	store, _ := store.Get(r, "minitwit-session")
+	if store.Values["user_id"] == nil {
+		http.Error(w, "You are not logged in", http.StatusBadRequest)
+		return
+	}
+	store.Options.MaxAge = -1 // Clear session
+	store.Save(r, w)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
