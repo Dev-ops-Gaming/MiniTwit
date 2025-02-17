@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -72,6 +73,24 @@ func main() {
 }
 
 // General functions
+
+func init_db() {
+	// Creates the database tables
+	err := db.Close()
+	if err != nil {
+		log.Fatalf("Failed to close the database: %v", err)
+	}
+
+	file, err := os.ReadFile("schema.sql")
+	if err != nil {
+		log.Fatalf("Failed to read sql script: %v", err)
+	}
+	fileAsString := string(file)
+	_, err = db.Exec(fileAsString)
+	if err != nil {
+		log.Fatalf("Failed to create the database tables: %v", err)
+	}
+}
 
 func connectDB() *sql.DB {
 	db, err := sql.Open("sqlite3", DATABASE)
