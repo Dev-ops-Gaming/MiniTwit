@@ -10,11 +10,19 @@
   <div class="page">
     <header>
       <h1>MiniTwit</h1>
+      {{ if .User }}
+      <nav class="navigation">
+        <a href="/{{ .User.Username }}">my timeline</a> |
+        <a href="/public">public timeline</a> |
+        <a href="/logout">sign out [{{ .User.Username }}]</a>
+      </nav>
+      {{ else }}
       <nav class="navigation">
           <a href="/">Public Timeline</a> |
           <a href="/register">Sign Up</a> |
           <a href="/login">Sign In</a>
       </nav>
+      {{ end }}
     </header>
     <main class="body">
       {{ block "body" . }}{{ end }}
