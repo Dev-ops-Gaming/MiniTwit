@@ -61,6 +61,7 @@ func main() {
 	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
 	r.HandleFunc("/logout", logoutHandler).Methods("GET")
 	r.HandleFunc("/{username}", userTimelineHandler).Methods("GET")
+	r.HandleFunc("/add_message", addMessageHandler).Methods("POST")
 
 	// Serve static files
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -103,15 +104,27 @@ func getGravatar(email string, size int) string {
 
 func timelineHandler(w http.ResponseWriter, r *http.Request) {
 	messages, err := queryTimeline()
+	session, _ := store.Get(r, "minitwit-session")
+
 	if err != nil {
 		http.Error(w, "Failed to load timeline", http.StatusInternalServerError)
 		return
 	}
 
+	if session.Values["user_id"] == nil || session.Values["username"] == nil {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	username := session.Values["username"].(string)
+	user_id := session.Values["user_id"].(int)
+
 	data := struct {
 		Messages []Message
+		User     User
 	}{
 		Messages: messages,
+		User:     User{Username: username, ID: user_id},
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
@@ -179,6 +192,28 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		//TODO: REMEMBER TO ADD COOKIE
 	}
+}
+
+func addMessageHandler(w http.ResponseWriter, r *http.Request) {
+	store, _ := store.Get(r, "minitwit-session")
+	if store.Values["user_id"] == nil {
+		http.Error(w, "You are not logged in", http.StatusBadRequest)
+		return
+	}
+
+	// Get input from form
+	text := r.FormValue("text")
+	userID := store.Values["user_id"].(int)
+
+	// Insert message into the database
+	_, err := db.Exec("INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)", userID, text, time.Now().Unix())
+	if err != nil {
+		http.Error(w, "Failed to insert message", http.StatusInternalServerError)
+		return
+	}
+
+	// Redirect to timeline
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 //Query functions
@@ -287,6 +322,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Set session values
 		store.Values["user_id"] = user.ID
+		store.Values["username"] = user.Username
 		err = store.Save(r, w)
 
 		// Redirect to timeline
