@@ -159,12 +159,22 @@ func publicTimelineHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Default data
 	data := struct {
 		Messages []Message
-		User     User
+		User     *User
 	}{
 		Messages: messages,
-		User:     User{Username: "dummy"},
+		User:     nil,
+	}
+
+	session, _ := store.Get(r, "minitwit-session")
+
+	// User is logged in
+	if session.Values["user_id"] != nil {
+		userID := session.Values["user_id"].(int)
+		username := session.Values["username"].(string)
+		data.User = &User{Username: username, ID: userID}
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
@@ -174,19 +184,35 @@ func publicTimelineHandler(w http.ResponseWriter, r *http.Request) {
 
 func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+
+	// For some reason favicon.ico is being passed as a username, it also changes the username to lowercase? - ignore this for now, fix later
+	if vars["username"] == "favicon.ico" {
+		return
+	}
+
 	username := vars["username"]
+
 	messages, err := queryUserTimeline(username)
 	if err != nil {
 		http.Error(w, "Failed to load user timeline", http.StatusInternalServerError)
 		return
 	}
-
+	// Default data
 	data := struct {
 		Messages []Message
-		User     User
+		User     *User
 	}{
 		Messages: messages,
-		User:     User{Username: "dummy"},
+		User:     nil,
+	}
+
+	session, _ := store.Get(r, "minitwit-session")
+
+	// User is logged in
+	if session.Values["user_id"] != nil {
+		userID := session.Values["user_id"].(int)
+		username := session.Values["username"].(string)
+		data.User = &User{Username: username, ID: userID}
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
