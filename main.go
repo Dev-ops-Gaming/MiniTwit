@@ -32,7 +32,6 @@ var (
 	store        = sessions.NewCookieStore([]byte(SECRET_KEY))
 )
 
-// currently unused
 type User struct {
 	ID       int
 	Username string
@@ -58,6 +57,7 @@ func main() {
 	// Routes
 	r := mux.NewRouter()
 	r.HandleFunc("/", timelineHandler).Methods("GET")
+	r.HandleFunc("/public", publicTimelineHandler).Methods("GET")
 	r.HandleFunc("/register", registerHandler).Methods("GET", "POST")
 	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
 	r.HandleFunc("/logout", logoutHandler).Methods("GET")
@@ -122,28 +122,49 @@ func getGravatar(email string, size int) string {
 // Handlers
 
 func timelineHandler(w http.ResponseWriter, r *http.Request) {
-	messages, err := queryTimeline()
 	session, _ := store.Get(r, "minitwit-session")
+
+	if session.Values["user_id"] == nil || session.Values["username"] == nil {
+		http.Redirect(w, r, "/public", http.StatusFound)
+		return
+	}
+
+	userID := session.Values["user_id"].(int)
+	username := session.Values["username"].(string)
+
+	messages, err := queryTimeline(userID)
 
 	if err != nil {
 		http.Error(w, "Failed to load timeline", http.StatusInternalServerError)
 		return
 	}
 
-	if session.Values["user_id"] == nil || session.Values["username"] == nil {
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
+	data := struct {
+		Messages []Message
+		User     User
+	}{
+		Messages: messages,
+		User:     User{Username: username, ID: userID},
 	}
 
-	username := session.Values["username"].(string)
-	user_id := session.Values["user_id"].(int)
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+	}
+}
+
+func publicTimelineHandler(w http.ResponseWriter, r *http.Request) {
+	messages, err := queryPublicTimeline()
+	if err != nil {
+		http.Error(w, "Failed to load public timeline", http.StatusInternalServerError)
+		return
+	}
 
 	data := struct {
 		Messages []Message
 		User     User
 	}{
 		Messages: messages,
-		User:     User{Username: username, ID: user_id},
+		User:     User{Username: "dummy"},
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
@@ -162,8 +183,10 @@ func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		Messages []Message
+		User     User
 	}{
 		Messages: messages,
+		User:     User{Username: "dummy"},
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
@@ -237,7 +260,43 @@ func addMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 //Query functions
 
-func queryTimeline() ([]Message, error) {
+func queryTimeline(userID int) ([]Message, error) {
+	rows, err := queryDB(`
+		select message.*, user.* 
+		from message, user
+        where message.flagged = 0 and message.author_id = user.user_id and (
+            user.user_id = ? or
+            user.user_id in (select whom_id from follower
+                                    where who_id = ?))
+		order by message.pub_date desc limit ?`, userID, userID, PER_PAGE)
+	if err != nil {
+		fmt.Println("Error in queryTimeline: ", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		// Refactor later
+		var pubDate int64
+		var messageID, authorID, flagged, userID int
+		var text, username, email, pwHash string
+
+		err := rows.Scan(&messageID, &authorID, &text, &pubDate, &flagged, &userID, &username, &email, &pwHash)
+		// Construct Message struct
+		var m Message
+		m = Message{ID: messageID, Author: username, Content: text, Email: email}
+		m.PubDate = formatTime(pubDate) // Convert timestamp from UNIX to readable format
+		if err != nil {
+			fmt.Println("Error in queryTimeline: ", err)
+			return nil, err
+		}
+		messages = append(messages, m)
+	}
+	return messages, nil
+}
+
+func queryPublicTimeline() ([]Message, error) {
 	rows, err := queryDB(`
 		SELECT message.author_id, user.username, message.text, message.pub_date, user.email
 		FROM message
