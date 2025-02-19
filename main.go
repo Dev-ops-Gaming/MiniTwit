@@ -62,6 +62,8 @@ func main() {
 	r.HandleFunc("/login", loginHandler).Methods("GET", "POST")
 	r.HandleFunc("/logout", logoutHandler).Methods("GET")
 	r.HandleFunc("/{username}", userTimelineHandler).Methods("GET")
+	r.HandleFunc("/{username}/follow", followHandler).Methods("GET", "POST")
+	r.HandleFunc("/{username}/unfollow", unfollowHandler).Methods("GET", "POST")
 	r.HandleFunc("/add_message", addMessageHandler).Methods("POST")
 
 	// Serve static files
@@ -443,4 +445,82 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	store.Options.MaxAge = -1 // Clear session
 	store.Save(r, w)
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func followHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "minitwit-session")
+	if session.Values["user_id"] == nil {
+		http.Error(w, "You are not logged in", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println("1")
+	// Get the user to follow
+	vars := mux.Vars(r)
+	username := vars["username"]
+	user, err := getUserFromDb(username)
+	if err != nil {
+		http.Error(w, "User does not exist", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the user is already following the user
+	isFollowing, err := isUserFollowing(session.Values["user_id"].(int), user.ID)
+	if err != nil {
+		http.Error(w, "Failed to check if user is already following", http.StatusInternalServerError)
+		return
+	}
+	if isFollowing {
+		http.Error(w, "You are already following this user", http.StatusBadRequest)
+		return
+	}
+
+	// Insert the follow into the database
+	_, err = db.Exec("INSERT INTO follower (who_id, whom_id) VALUES (?, ?)", session.Values["user_id"], user.ID)
+	if err != nil {
+		http.Error(w, "Failed to follow user", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("3")
+	// Redirect to the user's timeline
+	http.Redirect(w, r, "/"+username, http.StatusFound)
+}
+
+func unfollowHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "minitwit-session")
+	if session.Values["user_id"] == nil {
+		http.Error(w, "You are not logged in", http.StatusBadRequest)
+		return
+	}
+
+	// Get the user to unfollow
+	vars := mux.Vars(r)
+	username := vars["username"]
+	user, err := getUserFromDb(username)
+
+	if err != nil {
+		http.Error(w, "User does not exist", http.StatusBadRequest)
+		return
+	}
+
+	// Delete the follow from the database
+	_, err = db.Exec("DELETE FROM follower WHERE who_id = ? AND whom_id = ?", session.Values["user_id"], user.ID)
+	if err != nil {
+		http.Error(w, "Failed to unfollow user", http.StatusInternalServerError)
+		return
+	}
+
+	// Redirect to the user's timeline
+	http.Redirect(w, r, "/"+username, http.StatusFound)
+}
+
+func isUserFollowing(whoID, whomID int) (bool, error) {
+	var count int
+	row := db.QueryRow("SELECT COUNT(*) FROM follower WHERE who_id = ? AND whom_id = ?", whoID, whomID)
+	err := row.Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
