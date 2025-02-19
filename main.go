@@ -144,9 +144,11 @@ func timelineHandler(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Messages []Message
 		User     User
+		PageType string
 	}{
 		Messages: messages,
 		User:     User{Username: username, ID: userID},
+		PageType: "timeline",
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
@@ -165,9 +167,11 @@ func publicTimelineHandler(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Messages []Message
 		User     *User
+		PageType string
 	}{
 		Messages: messages,
 		User:     nil,
+		PageType: "public",
 	}
 
 	session, _ := store.Get(r, "minitwit-session")
@@ -203,9 +207,13 @@ func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Messages []Message
 		User     *User
+		PageType string
+		Username string
 	}{
 		Messages: messages,
 		User:     nil,
+		PageType: "user",
+		Username: username,
 	}
 
 	session, _ := store.Get(r, "minitwit-session")

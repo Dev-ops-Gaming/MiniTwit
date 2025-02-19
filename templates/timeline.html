@@ -1,10 +1,18 @@
 {{ define "body" }}
+    {{ if eq .PageType "public" }}
+        <h2> Public Timeline</h2>
+    {{ else if eq .PageType "user" }}
+        <h2> {{ .Username }}'s Timeline</h2>
+    {{ else }}
+        <h2> My Timeline</h2>
+    {{ end }}
     {{ if ne .User nil }}
     <div class="twitbox">
         <h3>What's on your mind {{  .User.Username }}?</h3>
-        <form action="/add_message" method="POST">
-            <textarea name="text" placeholder="Write a message..." required></textarea>
-            <button type="submit">Post</button>
+        <form action="/add_message" method=post>
+            <p><input type=text name=text size=60><!--
+            --><input type=submit value="Share">
+          </form>
         </form>
     </div>
     {{ end }}
