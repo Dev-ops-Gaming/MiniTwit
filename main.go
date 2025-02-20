@@ -131,7 +131,6 @@ func addFlash(w http.ResponseWriter, r *http.Request, message string) {
 func getFlashes(w http.ResponseWriter, r *http.Request) []interface{} {
 	session, _ := store.Get(r, "minitwit-session")
 	flashes := session.Flashes()
-	fmt.Println("Flashes: ", flashes)
 	session.Save(r, w)
 	return flashes
 }
