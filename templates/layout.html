@@ -24,13 +24,20 @@
       </div>
       {{ end }}
     </header>
+    {{if .Flashes}}
+      <ul class="flashes">
+          {{range .Flashes}}
+              <li>{{.}}</li>
+          {{end}}
+      </ul>
+    {{end}}
     <main class="body">
       {{ block "body" . }}{{ end }}
     </main>
 
-    <footer class="footer">
+    <div class="footer">
       MiniTwit &mdash; A Go Gorilla web application
-    </footer>
+    </div>
   </div>
 </body>
 </html>
