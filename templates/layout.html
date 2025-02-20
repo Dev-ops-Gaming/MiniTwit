@@ -24,6 +24,13 @@
       </div>
       {{ end }}
     </header>
+    {{if .Flashes}}
+      <ul class="flashes">
+          {{range .Flashes}}
+              <li>{{.}}</li>
+          {{end}}
+      </ul>
+    {{end}}
     <main class="body">
       {{ block "body" . }}{{ end }}
     </main>

@@ -121,6 +121,21 @@ func getGravatar(email string, size int) string {
 	return fmt.Sprintf("http://www.gravatar.com/avatar/%s?d=identicon&s=%d", hex.EncodeToString(hash.Sum(nil)), size)
 }
 
+// Flash messages
+func addFlash(w http.ResponseWriter, r *http.Request, message string) {
+	session, _ := store.Get(r, "minitwit-session")
+	session.AddFlash(message)
+	session.Save(r, w)
+}
+
+func getFlashes(w http.ResponseWriter, r *http.Request) []interface{} {
+	session, _ := store.Get(r, "minitwit-session")
+	flashes := session.Flashes()
+	fmt.Println("Flashes: ", flashes)
+	session.Save(r, w)
+	return flashes
+}
+
 // Handlers
 
 func timelineHandler(w http.ResponseWriter, r *http.Request) {
@@ -145,10 +160,12 @@ func timelineHandler(w http.ResponseWriter, r *http.Request) {
 		Messages []Message
 		User     User
 		PageType string
+		Flashes  []interface{}
 	}{
 		Messages: messages,
 		User:     User{Username: username, ID: userID},
 		PageType: "timeline",
+		Flashes:  getFlashes(w, r),
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
@@ -168,10 +185,12 @@ func publicTimelineHandler(w http.ResponseWriter, r *http.Request) {
 		Messages []Message
 		User     *User
 		PageType string
+		Flashes  []interface{}
 	}{
 		Messages: messages,
 		User:     nil,
 		PageType: "public",
+		Flashes:  getFlashes(w, r),
 	}
 
 	session, _ := store.Get(r, "minitwit-session")
@@ -216,12 +235,14 @@ func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
 		PageType    string
 		ProfileUser User
 		Followed    bool
+		Flashes     []interface{}
 	}{
 		Messages:    messages,
 		User:        nil,
 		PageType:    "user",
 		ProfileUser: profileUser,
 		Followed:    false,
+		Flashes:     getFlashes(w, r),
 	}
 
 	session, _ := store.Get(r, "minitwit-session")
@@ -280,8 +301,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		_, err = db.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", username, email, pwHash)
 
 		// redirect to timeline
-		http.Redirect(w, r, "/", http.StatusFound)
-		//TODO: REMEMBER TO ADD COOKIE
+		addFlash(w, r, "You were successfully registered and can login now")
+		http.Redirect(w, r, "/login", http.StatusFound)
 	}
 }
 
@@ -304,6 +325,7 @@ func addMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect to timeline
+	addFlash(w, r, "Your message was recorded")
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -453,25 +475,31 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		err = store.Save(r, w)
 
 		// Redirect to timeline
+		addFlash(w, r, "You were logged in")
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	store, _ := store.Get(r, "minitwit-session")
-	if store.Values["user_id"] == nil {
+	session, _ := store.Get(r, "minitwit-session")
+	if session.Values["user_id"] == nil {
 		http.Error(w, "You are not logged in", http.StatusBadRequest)
 		return
 	}
-	store.Options.MaxAge = -1 // Clear session
-	store.Save(r, w)
+	// TODO: doesnt work atm - i suspect it's because the session is being cleared, but not sure
+	addFlash(w, r, "You have been logged out")
+
+	session.Options.MaxAge = -1 // Clear session
+	session.Save(r, w)
+
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func followHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "minitwit-session")
 	if session.Values["user_id"] == nil {
-		http.Error(w, "You are not logged in", http.StatusBadRequest)
+		addFlash(w, r, "You must be logged in to follow users")
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 
@@ -487,11 +515,12 @@ func followHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the user is already following the user
 	isFollowing, err := isUserFollowing(session.Values["user_id"].(int), user.ID)
 	if err != nil {
-		http.Error(w, "Failed to check if user is already following", http.StatusInternalServerError)
+		http.Error(w, "Failed to check if user is following", http.StatusInternalServerError)
 		return
 	}
 	if isFollowing {
-		http.Error(w, "You are already following this user", http.StatusBadRequest)
+		addFlash(w, r, "You are already following "+username)
+		http.Redirect(w, r, "/"+username, http.StatusFound)
 		return
 	}
 
@@ -503,13 +532,15 @@ func followHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect to the user's timeline
+	addFlash(w, r, "You are now following "+username)
 	http.Redirect(w, r, "/"+username, http.StatusFound)
 }
 
 func unfollowHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "minitwit-session")
 	if session.Values["user_id"] == nil {
-		http.Error(w, "You are not logged in", http.StatusBadRequest)
+		addFlash(w, r, "You are not logged in")
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 
@@ -531,6 +562,7 @@ func unfollowHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect to the user's timeline
+	addFlash(w, r, "You have unfollowed "+username)
 	http.Redirect(w, r, "/"+username, http.StatusFound)
 }
 
