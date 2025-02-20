@@ -6,7 +6,7 @@
 
 # Build Stage
 #FROM golang:1.23.1 AS buildstage
-FROM golang:1.23.5 AS buildstage
+FROM golang:1.23 AS buildstage
 
 WORKDIR /build
 
@@ -24,9 +24,8 @@ COPY . /build
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o /build/server main.go
 #ERROR: Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work
 
-# Final Stage
-#FROM alpine:latest
-FROM golang:1.23.5
+FROM alpine:latest
+RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
