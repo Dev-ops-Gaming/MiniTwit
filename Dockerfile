@@ -29,7 +29,7 @@ COPY . /build
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o /build/server main.go
 #ERROR: Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y libc6
 
 WORKDIR /app
