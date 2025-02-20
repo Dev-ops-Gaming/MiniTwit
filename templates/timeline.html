@@ -1,26 +1,43 @@
 {{ define "body" }}
     {{ if eq .PageType "public" }}
-        <h2> Public Timeline</h2>
+        <h2>Public Timeline</h2>
     {{ else if eq .PageType "user" }}
-        <h2> {{ .Username }}'s Timeline</h2>
+        <h2>{{ .ProfileUser.Username }}'s Timeline</h2>
     {{ else }}
-        <h2> My Timeline</h2>
+        <h2>My Timeline</h2>
     {{ end }}
+
     {{ if ne .User nil }}
-    <div class="twitbox">
-        <h3>What's on your mind {{  .User.Username }}?</h3>
-        <form action="/add_message" method=post>
-            <p><input type=text name=text size=60><!--
-            --><input type=submit value="Share">
-          </form>
-        </form>
-    </div>
+        {{ if eq .PageType "user" }}
+            <div class="followstatus">
+                {{ if eq .User.ID .ProfileUser.ID }}
+                    <p>This is you!</p>
+                {{ else if .Followed }}
+                    <p>You are currently following this user. 
+                        <a class="unfollow" href="/{{ .ProfileUser.Username }}/unfollow">Unfollow user</a>.
+                    </p>
+                {{ else }}
+                    <p>You are not yet following this user. 
+                        <a class="follow" href="/{{ .ProfileUser.Username }}/follow">Follow user</a>.
+                    </p>
+                {{ end }}
+            </div>
+        {{ end }}
+
+        <div class="twitbox">
+            <h3>What's on your mind, {{ .User.Username }}?</h3>
+            <form action="/add_message" method="post">
+                <p><input type="text" name="text" size="60">
+                <input type="submit" value="Share"></p>
+            </form>
+        </div>
     {{ end }}
+
     {{ if .Messages }}
         <ul class="messages">
             {{ range .Messages }}
                 <li>
-                    <img src="{{ getGravatar .Email 40 }}" alt="Gravatar">
+                    <img src="{{ getGravatar .Email 48 }}" alt="Gravatar">
                     <p>
                         <strong><a href="/{{ .Author }}">{{ .Author }}</a></strong>
                         {{ .Content }}

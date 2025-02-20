@@ -197,23 +197,31 @@ func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := vars["username"]
+	profileUser, err := getUserFromDb(username)
+	if err != nil {
+		http.Error(w, "User does not exist", http.StatusBadRequest)
+		return
+	}
 
 	messages, err := queryUserTimeline(username)
 	if err != nil {
 		http.Error(w, "Failed to load user timeline", http.StatusInternalServerError)
 		return
 	}
+
 	// Default data
 	data := struct {
-		Messages []Message
-		User     *User
-		PageType string
-		Username string
+		Messages    []Message
+		User        *User
+		PageType    string
+		ProfileUser User
+		Followed    bool
 	}{
-		Messages: messages,
-		User:     nil,
-		PageType: "user",
-		Username: username,
+		Messages:    messages,
+		User:        nil,
+		PageType:    "user",
+		ProfileUser: profileUser,
+		Followed:    false,
 	}
 
 	session, _ := store.Get(r, "minitwit-session")
@@ -223,6 +231,11 @@ func userTimelineHandler(w http.ResponseWriter, r *http.Request) {
 		userID := session.Values["user_id"].(int)
 		username := session.Values["username"].(string)
 		data.User = &User{Username: username, ID: userID}
+		data.Followed, err = isUserFollowing(userID, profileUser.ID)
+		if err != nil {
+			http.Error(w, "Failed to check if user is following", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
@@ -462,7 +475,6 @@ func followHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("1")
 	// Get the user to follow
 	vars := mux.Vars(r)
 	username := vars["username"]
@@ -490,7 +502,6 @@ func followHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("3")
 	// Redirect to the user's timeline
 	http.Redirect(w, r, "/"+username, http.StatusFound)
 }
