@@ -13,6 +13,11 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 
+
+# Install system dependencies for CGO
+RUN apt-get update && apt-get install -y gcc libc-dev
+ENV CGO_ENABLED=1
+
 # Install any needed dependencies...
 RUN go get github.com/gorilla/mux
 RUN go get github.com/gorilla/sessions
