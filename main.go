@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -77,21 +78,22 @@ func main() {
 // General functions
 
 func init_db() {
-	// Creates the database tables
-	err := db.Close()
+	db := connectDB()
+	defer db.Close()
+
+	// Read the schema file
+	schemaPath := filepath.Join(filepath.Dir(os.Args[0]), "schema.sql")
+	schema, err := os.ReadFile(schemaPath)
 	if err != nil {
-		log.Fatalf("Failed to close the database: %v", err)
+		log.Fatalf("Failed to read schema file: %v", err)
 	}
 
-	file, err := os.ReadFile("schema.sql")
+	// Execute the schema
+	_, err = db.Exec(string(schema))
 	if err != nil {
-		log.Fatalf("Failed to read sql script: %v", err)
+		log.Fatalf("Failed to execute schema: %v", err)
 	}
-	fileAsString := string(file)
-	_, err = db.Exec(fileAsString)
-	if err != nil {
-		log.Fatalf("Failed to create the database tables: %v", err)
-	}
+
 }
 
 func connectDB() *sql.DB {
