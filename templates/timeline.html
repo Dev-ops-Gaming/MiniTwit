@@ -1,10 +1,13 @@
 {{ define "body" }}
     {{ if eq .PageType "public" }}
         <h2>Public Timeline</h2>
+        {{ define "title" }}Public Timeline{{ end }}
     {{ else if eq .PageType "user" }}
         <h2>{{ .ProfileUser.Username }}'s Timeline</h2>
+        {{ define "title" }} {{ .ProfileUser.Username }}'s Timeline {{ end }}
     {{ else }}
         <h2>My Timeline</h2>
+        {{ define "title" }}My Timeline{{ end }}
     {{ end }}
 
     {{ if ne .User nil }}
