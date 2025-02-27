@@ -39,15 +39,11 @@ func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
 func getUserId(database *sql.DB, username string) (int, any) {
 	// Convenience method to look up the id for a username.
 	var userId int
-	// use .QueryRow to handle possible empty results
-	//q := database.QueryRow("select user_id from user where username = ?", username)
-	//err := q.Scan(&userId)
 	if err := database.QueryRow("select user_id from user where username = ?", username).Scan(&userId); err == sql.ErrNoRows {
-		//empty result
-		//return 0, err
+		//no rows
 		return -1, err
 	} else {
-		//got smth
+		//got something
 		return userId, nil
 	}
 }
@@ -72,6 +68,7 @@ func updateLatest(r *http.Request) {
 	}
 }
 
+// verified working
 func getLatest(w http.ResponseWriter, r *http.Request) {
 	content, err := os.ReadFile("./latest_processed_sim_action_id.txt")
 	if err != nil {
@@ -89,8 +86,6 @@ func getLatest(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int{"latest": latestInt})
 }
 
-// vi har register i main.go og her
-// hvordan sikrer vi at den rigtige bliver kaldt?
 func register(database *sql.DB) http.HandlerFunc { //([]byte, int)
 	return func(w http.ResponseWriter, r *http.Request) {
 		updateLatest(r)
