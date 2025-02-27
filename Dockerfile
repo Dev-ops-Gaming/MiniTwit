@@ -26,7 +26,7 @@ RUN go get github.com/mattn/go-sqlite3
 #COPY . .
 COPY . /build
 # Build for Linux with static linking
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o /build/server main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o /build/server minitwit/main.go
 #ERROR: Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work
 
 FROM debian:bookworm-slim
