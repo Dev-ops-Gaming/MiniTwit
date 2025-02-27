@@ -10,8 +10,8 @@ from contextlib import closing
 
 
 #BASE_URL = 'http://127.0.0.1:5001'
-BASE_URL = 'http://localhost:8080'
-DATABASE = "minitwit.db"
+BASE_URL = 'http://localhost:8081'
+DATABASE = "minitwit/minitwit.db"
 USERNAME = 'simulator'
 PWD = 'super_safe!'
 CREDENTIALS = ':'.join([USERNAME, PWD]).encode('ascii')
@@ -24,7 +24,7 @@ HEADERS = {'Connection': 'close',
 def init_db():
     """Creates the database tables."""
     with closing(sqlite3.connect(DATABASE)) as db:
-        with open("schema.sql") as fp:
+        with open("minitwit/schema.sql") as fp:
             db.cursor().executescript(fp.read())
         db.commit()
 
