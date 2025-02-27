@@ -10,7 +10,7 @@ FROM golang:1.23 AS buildstage
 
 WORKDIR /build
 
-COPY minitwit/go.mod minitwit/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 
@@ -24,9 +24,9 @@ RUN go get github.com/gorilla/sessions
 RUN go get github.com/mattn/go-sqlite3
 
 #COPY . .
-COPY minitwit /build/minitwit
+COPY . /build
 # Build for Linux with static linking
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o /build/server minitwit/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o /build/server main.go
 #ERROR: Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work
 
 FROM debian:bookworm-slim
