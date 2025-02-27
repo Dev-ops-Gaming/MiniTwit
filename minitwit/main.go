@@ -17,8 +17,6 @@ const DBPATH = "./minitwit.db"
 
 var database *sql.DB
 
-// Runner
-
 func main() {
 	// Db logic
 	database, err := db.ConnectDB(DBPATH)
