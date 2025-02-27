@@ -21,6 +21,9 @@
 go.work
 go.work.sum
 
+#vagrant
+.vagrant
+
 # env file
 .env
 *.venv
