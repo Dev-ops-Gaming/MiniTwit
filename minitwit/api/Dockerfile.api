@@ -1,0 +1,15 @@
+FROM golang:1.23
+
+WORKDIR /app
+
+# Copy API code first
+COPY . .
+
+
+RUN go mod tidy
+
+RUN go build -o api
+
+EXPOSE 8081
+
+CMD ["./api"]
