@@ -15,7 +15,7 @@ type User struct {
 
 func GetUserByUsername(db *sql.DB, username string) (*User, error) {
 	var user User
-	err := db.QueryRow("SELECT id, username, email, pw_hash FROM user WHERE username = ?", username).Scan(&user.ID, &user.Username, &user.Email, &user.PwHash)
+	err := db.QueryRow("SELECT user_id, username, email, pw_hash FROM user WHERE username = ?", username).Scan(&user.ID, &user.Username, &user.Email, &user.PwHash)
 	if err != nil {
 		return nil, err
 	}
