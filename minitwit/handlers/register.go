@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/models"
-	"github.com/Dev-ops-Gaming/MiniTwit/utils"
+	"minitwit/models"
+	"minitwit/utils"
 )
 
 var registerTmpl = template.Must(template.ParseFiles("templates/layout.html", "templates/register.html"))

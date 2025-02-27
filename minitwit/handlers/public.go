@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/db"
-	"github.com/Dev-ops-Gaming/MiniTwit/models"
-	"github.com/Dev-ops-Gaming/MiniTwit/utils"
+	"minitwit/db"
+	"minitwit/models"
+	"minitwit/utils"
 )
 
 func PublicTimelineHandler(database *sql.DB) http.HandlerFunc {

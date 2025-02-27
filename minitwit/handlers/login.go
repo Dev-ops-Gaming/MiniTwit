@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/models"
-	"github.com/Dev-ops-Gaming/MiniTwit/utils"
+	"minitwit/models"
+	"minitwit/utils"
 )
 
 func LoginHandler(database *sql.DB) http.HandlerFunc {

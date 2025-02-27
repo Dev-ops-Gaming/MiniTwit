@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/models"
-	"github.com/Dev-ops-Gaming/MiniTwit/utils"
+	"minitwit/models"
+	"minitwit/utils"
+
 	"github.com/gorilla/mux"
 )
 

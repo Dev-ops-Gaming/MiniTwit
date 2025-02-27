@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/utils"
+	"minitwit/utils"
 )
 
 func AddMessageHandler(database *sql.DB) http.HandlerFunc {
