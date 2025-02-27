@@ -25,27 +25,18 @@ var database *sql.DB
 
 const DBPATH = "../minitwit.db"
 
-func not_req_from_simulator(r *http.Request) ([]byte, int) {
+func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
 	from_simulator := r.Header.Get("Authorization")
-
-	var err string
 	if from_simulator != "Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh" {
-		err = "You are not authorized to use this resource!"
-		jsonSstring, erro := json.Marshal(map[string]any{"status": 403, "error_msg": err})
-		if erro != nil {
-			println(erro)
-		}
-		return jsonSstring, 403
-
-	} else {
-		return nil, 200
+		w.WriteHeader(403)
+		response := map[string]any{"status": 403, "error_msg": "You are not authorized to access this resource!"}
+		json.NewEncoder(w).Encode(response)
+		return true
 	}
-
-	//return from teachers API:
-	// return jsonify({"status": 403, "error_msg": error}), 403
+	return false
 }
 
-func get_user_id(database *sql.DB, username string) (int, any) {
+func getUserId(database *sql.DB, username string) (int, any) {
 	// Convenience method to look up the id for a username.
 	var userId int
 	// use .QueryRow to handle possible empty results
@@ -61,7 +52,7 @@ func get_user_id(database *sql.DB, username string) (int, any) {
 	}
 }
 
-func update_latest(r *http.Request) {
+func updateLatest(r *http.Request) {
 	// Get arg value associated with 'latest' & convert to int
 	//parsed_command_id, err := strconv.Atoi(r.FormValue("latest"))
 	parsed_command_id := r.FormValue("latest")
@@ -102,7 +93,7 @@ func getLatest(w http.ResponseWriter, r *http.Request) {
 // hvordan sikrer vi at den rigtige bliver kaldt?
 func register(database *sql.DB) http.HandlerFunc { //([]byte, int)
 	return func(w http.ResponseWriter, r *http.Request) {
-		update_latest(r)
+		updateLatest(r)
 
 		//must decode into struct bc data sent as json, which golang bitches abt
 		d := json.NewDecoder(r.Body)
@@ -118,7 +109,7 @@ func register(database *sql.DB) http.HandlerFunc { //([]byte, int)
 			} else if t.Pwd == "" {
 				erro = "You have to enter a password"
 				//else if get_user_id not none is missing
-			} else if id, err := get_user_id(database, t.Username); err == nil || id != -1 {
+			} else if id, err := getUserId(database, t.Username); err == nil || id != -1 {
 				erro = "The username is already taken"
 				fmt.Println(id)
 			} else {
@@ -155,12 +146,10 @@ func register(database *sql.DB) http.HandlerFunc { //([]byte, int)
 
 func messages(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		update_latest(r)
+		updateLatest(r)
 
-		w.Header().Set("Content-Type", "application/json")
-		not_from_sim_response, _ := not_req_from_simulator(r)
-		if not_from_sim_response != nil {
-			json.NewEncoder(w).Encode(not_from_sim_response)
+		if notReqFromSimulator(w, r) {
+			return
 		}
 		// no_msgs = request.args.get("no", type=int, default=100)
 		no_msgs := r.FormValue("no")
@@ -190,7 +179,7 @@ func messages(database *sql.DB) http.HandlerFunc {
 				filtered_msgs = append(filtered_msgs, filtered_msg)
 
 			}
-			//w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(filtered_msgs)
 		}
 	}
@@ -198,13 +187,11 @@ func messages(database *sql.DB) http.HandlerFunc {
 
 func messages_per_user(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		update_latest(r)
+		updateLatest(r)
 
 		w.Header().Set("Content-Type", "application/json")
-		not_from_sim_response, _ := not_req_from_simulator(r)
-		if not_from_sim_response != nil {
-			json.NewEncoder(w).Encode(not_from_sim_response)
-			//return not_from_sim_response
+		if notReqFromSimulator(w, r) {
+			return
 		}
 
 		//get the username
@@ -213,7 +200,7 @@ func messages_per_user(database *sql.DB) http.HandlerFunc {
 
 		no_msgs := r.FormValue("no")
 		if r.Method == "GET" {
-			user_id, _ := get_user_id(database, username)
+			user_id, _ := getUserId(database, username)
 			if user_id == -1 {
 				fmt.Println("messages per user")
 				fmt.Println(username)
@@ -261,7 +248,7 @@ func messages_per_user(database *sql.DB) http.HandlerFunc {
 			//request_content := r.FormValue("content")
 			query := "INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)"
 
-			user_id, _ := get_user_id(database, username)
+			user_id, _ := getUserId(database, username)
 			_, err := database.Exec(query, user_id, content, time.Now())
 			if err != nil {
 				log.Fatalf("Failed to insert in db: %v", err)
@@ -274,18 +261,17 @@ func messages_per_user(database *sql.DB) http.HandlerFunc {
 
 func follow(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		update_latest(r)
+		updateLatest(r)
 
 		w.Header().Set("Content-Type", "application/json")
-		not_from_sim_response, _ := not_req_from_simulator(r)
-		if not_from_sim_response != nil {
-			json.NewEncoder(w).Encode(not_from_sim_response)
+		if notReqFromSimulator(w, r) {
+			return
 		}
 
 		//get the username
 		vars := mux.Vars(r)
 		username := vars["username"]
-		user_id, _ := get_user_id(database, username)
+		user_id, _ := getUserId(database, username)
 		if user_id == -1 {
 			fmt.Println("follow")
 			fmt.Println(username)
@@ -301,7 +287,7 @@ func follow(database *sql.DB) http.HandlerFunc {
 		if r.Method == "POST" && req["follow"] != "" {
 			fmt.Println("POST and follow!")
 			follows_username := req["follow"] //r.FormValue("follow")
-			follows_user_id, _ := get_user_id(database, follows_username)
+			follows_user_id, _ := getUserId(database, follows_username)
 			if follows_user_id == -1 {
 				// TODO: This has to be another error, likely 500???
 				//abort(404)
@@ -317,7 +303,7 @@ func follow(database *sql.DB) http.HandlerFunc {
 		} else if r.Method == "POST" && req["unfollow"] != "" {
 			fmt.Println("POST and UNfollow!")
 			unfollows_username := req["unfollow"] //r.FormValue("unfollow")
-			unfollows_user_id, _ := get_user_id(database, unfollows_username)
+			unfollows_user_id, _ := getUserId(database, unfollows_username)
 			if unfollows_user_id == -1 {
 				// TODO: This has to be another error, likely 500???
 				//abort(404)
@@ -360,7 +346,6 @@ func main() {
 	r := mux.NewRouter()
 
 	// Define routes
-	//r.HandleFunc("/", handlers.TimelineHandler(database)).Methods("GET")
 	r.HandleFunc("/register", register(database)).Methods("POST")
 	r.HandleFunc("/latest", getLatest).Methods("GET") //no db
 	r.HandleFunc("/msgs", messages(database)).Methods("GET")
