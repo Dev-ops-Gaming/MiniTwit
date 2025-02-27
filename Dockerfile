@@ -24,7 +24,7 @@ RUN go get github.com/gorilla/sessions
 RUN go get github.com/mattn/go-sqlite3
 
 #COPY . .
-COPY . /build
+COPY minitwit /build
 # Build for Linux with static linking
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o /build/server main.go
 #ERROR: Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work

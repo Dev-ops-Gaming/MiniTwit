@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/utils"
+	"minitwit/utils"
 )
 
 func LogoutHandler() http.HandlerFunc {

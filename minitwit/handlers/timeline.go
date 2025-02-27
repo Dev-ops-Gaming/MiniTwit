@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/db"
-	"github.com/Dev-ops-Gaming/MiniTwit/models"
-	"github.com/Dev-ops-Gaming/MiniTwit/utils"
+	"minitwit/db"
+	"minitwit/models"
+	"minitwit/utils"
 )
 
 var tmpl = template.Must(template.New("layout.html").Funcs(template.FuncMap{

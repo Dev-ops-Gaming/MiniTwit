@@ -1,4 +1,4 @@
-module github.com/Dev-ops-Gaming/MiniTwit
+module minitwit
 
 go 1.23
 

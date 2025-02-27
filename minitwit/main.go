@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Dev-ops-Gaming/MiniTwit/db"
-	"github.com/Dev-ops-Gaming/MiniTwit/handlers"
+	"minitwit/db"
+	"minitwit/handlers"
+
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 )
