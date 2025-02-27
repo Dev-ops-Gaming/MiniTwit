@@ -10,7 +10,7 @@ FROM golang:1.23 AS buildstage
 
 WORKDIR /build
 
-COPY go.mod go.sum ./
+COPY minitwit/go.mod minitwit/go.sum ./
 RUN go mod download
 
 
