@@ -1,14 +1,17 @@
 FROM golang:1.23
 
-WORKDIR /app
-
-# Copy API code first
-COPY . .
+WORKDIR /go/src/minitwit
 
 
-RUN go mod tidy
+COPY minitwit/go.mod minitwit/go.sum ./
 
-RUN go build -o api
+RUN go mod download
+
+COPY minitwit/ ./
+
+RUN cd api && go build -o api
+
+WORKDIR /go/src/minitwit/api
 
 EXPOSE 8081
 
