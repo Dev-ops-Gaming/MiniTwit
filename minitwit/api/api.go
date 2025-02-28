@@ -86,6 +86,7 @@ func getLatest(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int{"latest": latestInt})
 }
 
+// should be refactored
 func register(database *sql.DB) http.HandlerFunc { //([]byte, int)
 	return func(w http.ResponseWriter, r *http.Request) {
 		updateLatest(r)
@@ -139,6 +140,7 @@ func register(database *sql.DB) http.HandlerFunc { //([]byte, int)
 	}
 }
 
+// verified working
 func messages(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		updateLatest(r)
@@ -146,110 +148,129 @@ func messages(database *sql.DB) http.HandlerFunc {
 		if notReqFromSimulator(w, r) {
 			return
 		}
+
 		// no_msgs = request.args.get("no", type=int, default=100)
-		no_msgs := r.FormValue("no")
+		noMsgs, err := strconv.Atoi(r.URL.Query().Get("no"))
+		if err != nil || noMsgs <= 0 {
+			noMsgs = 100
+		}
 
 		if r.Method == "GET" {
-			query := "SELECT message.*, user.* FROM message, user WHERE message.flagged = 0 AND message.author_id = user.user_id ORDER BY message.pub_date DESC LIMIT ?"
-			messages, err := db.QueryDB(database, query, no_msgs)
+			// modified the given API to remove some unnecessary select
+			// might improve performance a bit
+			rows, err := db.QueryDB(database,
+				`SELECT message.text, message.pub_date, user.username
+				 FROM message JOIN user ON message.author_id = user.user_id
+				 WHERE message.flagged = 0
+				 ORDER BY message.pub_date DESC
+				 LIMIT ?`, noMsgs)
 			if err != nil {
-				print(err.Error())
+				http.Error(w, `{"status":500, "error_msg":"Database query failed"}`, http.StatusInternalServerError)
+				return
 			}
+			defer rows.Close()
 
-			var filtered_msgs []map[string]any
-			for messages.Next() {
-				var pubDate string //int64
-				var messageID, authorID, flagged, userID int
-				var text, username, email, pwHash string
-
-				err := messages.Scan(&messageID, &authorID, &text, &pubDate, &flagged, &userID, &username, &email, &pwHash)
-				if err != nil {
-					print(err.Error())
+			var filteredMsgs []map[string]any
+			for rows.Next() {
+				var text, pubDate, username string
+				if err := rows.Scan(&text, &pubDate, &username); err != nil {
+					http.Error(w, `{"status":500, "error_msg":"Failed to scan database results"}`, http.StatusInternalServerError)
+					return
 				}
 
-				filtered_msg := make(map[string]any)
-				filtered_msg["content"] = text
-				filtered_msg["pub_date"] = pubDate
-				filtered_msg["user"] = username
-				filtered_msgs = append(filtered_msgs, filtered_msg)
-
+				filteredMsgs = append(filteredMsgs, map[string]any{
+					"content":  text,
+					"pub_date": pubDate,
+					"user":     username,
+				})
 			}
+
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(filtered_msgs)
+			json.NewEncoder(w).Encode(filteredMsgs)
 		}
 	}
 }
 
+// verified working
 func messages_per_user(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		updateLatest(r)
 
-		w.Header().Set("Content-Type", "application/json")
 		if notReqFromSimulator(w, r) {
 			return
 		}
 
-		//get the username
+		// get the username from the URL
 		vars := mux.Vars(r)
 		username := vars["username"]
 
-		no_msgs := r.FormValue("no")
+		// get the user id from the database
+		userID, err := getUserId(database, username)
+		if err != nil {
+			http.Error(w, `{"status":404, "error_msg":"User not found"}`, 404)
+			return
+		}
+
 		if r.Method == "GET" {
-			user_id, _ := getUserId(database, username)
-			if user_id == -1 {
-				fmt.Println("messages per user")
-				fmt.Println(username)
-				print("user id not found in db!")
-				//abort(404)
+
+			// Parse the 'no' query parameter, default to 100
+			noMsgs, err := strconv.Atoi(r.URL.Query().Get("no"))
+			if err != nil || noMsgs <= 0 {
+				noMsgs = 100
 			}
-			query := "SELECT message.*, user.* FROM message, user WHERE message.flagged = 0 AND user.user_id = message.author_id AND user.user_id = ? ORDER BY message.pub_date DESC LIMIT ?"
-			messages, err := db.QueryDB(database, query, user_id, no_msgs)
+
+			query := `SELECT message.text, message.pub_date, user.username
+                      FROM message JOIN user ON message.author_id = user.user_id
+                      WHERE message.flagged = 0 AND user.user_id = ?
+                      ORDER BY message.pub_date DESC LIMIT ?`
+
+			rows, err := database.Query(query, userID, noMsgs)
 			if err != nil {
-				print(err.Error())
+				http.Error(w, `{"status":500, "error_msg":"Database query failed"}`, 500)
+				log.Println("Database query failed:", err)
+				return
 			}
+			defer rows.Close()
 
-			var filtered_msgs []map[string]any
-			for messages.Next() {
-				var pubDate string //int64
-				var messageID, authorID, flagged, userID int
-				var text, username, email, pwHash string
-
-				err := messages.Scan(&messageID, &authorID, &text, &pubDate, &flagged, &userID, &username, &email, &pwHash)
-				if err != nil {
-					print(err.Error())
+			// Process query results
+			var filteredMsgs []map[string]any
+			for rows.Next() {
+				var text, pubDate, username string
+				if err := rows.Scan(&text, &pubDate, &username); err != nil {
+					http.Error(w, `{"status":500, "error_msg":"Failed to process database results"}`, 500)
+					log.Println("Failed to scan database results:", err)
+					return
 				}
 
-				fmt.Println("content: ")
-				fmt.Println(text)
-				fmt.Println("user: ")
-				fmt.Println(username)
+				filteredMsgs = append(filteredMsgs, map[string]any{
+					"content":  text,
+					"pub_date": pubDate,
+					"user":     username,
+				})
+			}
 
-				filtered_msg := make(map[string]any)
-				filtered_msg["content"] = text
-				filtered_msg["pub_date"] = pubDate
-				filtered_msg["user"] = username
-				filtered_msgs = append(filtered_msgs, filtered_msg)
-			}
-			//w.Header().Set("Content-Type", "application/json")
-			err = json.NewEncoder(w).Encode(filtered_msgs)
-			if err != nil {
-				fmt.Println("failed to convert messages to json")
-				print(err.Error())
-			}
+			// Send response
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(filteredMsgs)
+
 		} else if r.Method == "POST" { // post message as <username>
-			var req map[string]interface{}
-			json.NewDecoder(r.Body).Decode(&req)
-			content := req["content"]
-			//request_content := r.FormValue("content")
-			query := "INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)"
-
-			user_id, _ := getUserId(database, username)
-			_, err := database.Exec(query, user_id, content, time.Now())
-			if err != nil {
-				log.Fatalf("Failed to insert in db: %v", err)
+			// another struct that maybe should be in models
+			var req struct {
+				Content string `json:"content"`
 			}
-			// return "", 204
-			w.Write([]byte("204"))
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, `{"status":400, "error_msg":"Invalid request format"}`, 400)
+				return
+			}
+
+			query := `INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)`
+			_, err := database.Exec(query, userID, req.Content, time.Now().Unix())
+			if err != nil {
+				http.Error(w, `{"status":500, "error_msg":"Failed to insert message"}`, 500)
+				log.Println("Failed to insert message:", err)
+				return
+			}
+			w.WriteHeader(204) // success - return empty response with status 204
 		}
 	}
 }
