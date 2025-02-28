@@ -10,7 +10,6 @@ type User struct {
 	ID       int
 	Username string
 	Email    string
-	Pwd      string //for register API
 	PwHash   string
 }
 

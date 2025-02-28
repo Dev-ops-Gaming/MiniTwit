@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"minitwit/db"
-	"minitwit/models"
 	"net/http"
 	"os"
 	"strconv"
@@ -86,56 +85,67 @@ func getLatest(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int{"latest": latestInt})
 }
 
-func register(database *sql.DB) http.HandlerFunc { //([]byte, int)
+func register(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		updateLatest(r)
 
-		//must decode into struct bc data sent as json, which golang bitches abt
-		d := json.NewDecoder(r.Body)
-		var t models.User
-		d.Decode(&t)
-		//fmt.Println(t)
-		var erro string = ""
+		// maybe move this into our models package
+		var requestData struct {
+			Username string `json:"username"`
+			Email    string `json:"email"`
+			Pwd      string `json:"pwd"`
+		}
+
+		// Decode JSON request body
+		if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
+			http.Error(w, `{"status":400, "error_msg":"Invalid JSON request body"}`, http.StatusBadRequest)
+			return
+		}
+
+		var errorMsg string
+
 		if r.Method == "POST" {
-			if t.Username == "" {
-				erro = "You have to enter a username"
-			} else if t.Email == "" || !strings.ContainsAny(t.Email, "@") {
-				erro = "You have to enter a valid email address"
-			} else if t.Pwd == "" {
-				erro = "You have to enter a password"
-				//else if get_user_id not none is missing
-			} else if id, err := getUserId(database, t.Username); err == nil || id != -1 {
-				erro = "The username is already taken"
-				fmt.Println(id)
+			if requestData.Username == "" {
+				errorMsg = "You have to enter a username"
+			} else if requestData.Email == "" || !strings.Contains(requestData.Email, "@") {
+				errorMsg = "You have to enter a valid email address"
+			} else if requestData.Pwd == "" {
+				errorMsg = "You have to enter a password"
+			} else if id, err := getUserId(database, requestData.Username); err == nil && id != -1 {
+				errorMsg = "The username is already taken"
 			} else {
-				// hash the password
+				// Hash password
 				hash := md5.New()
-				hash.Write([]byte(r.Form.Get("pwd")))
+				hash.Write([]byte(requestData.Pwd))
 				pwHash := hex.EncodeToString(hash.Sum(nil))
-				// insert the user into the database
-				/*_, err := database.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", r.Form.Get("username"), r.Form.Get("email"), pwHash)*/
-				_, err := database.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", t.Username, t.Email, pwHash)
 				if err != nil {
-					log.Fatalf("Failed to insert in db: %v", err)
+					http.Error(w, `{"status":500, "error_msg":"Failed to hash password"}`, 500)
+					return
+				}
+
+				// Insert user into database
+				query := "INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)"
+				_, err = database.Exec(query, requestData.Username, requestData.Email, string(pwHash))
+				if err != nil {
+					log.Printf("Failed to insert into database: %v", err)
+					http.Error(w, `{"status":500, "error_msg":"Internal server error"}`, 500)
+					return
 				}
 			}
 		}
 
-		if erro != "" {
-			jsonSstring, _ := json.Marshal(map[string]any{
+		if errorMsg != "" {
+			response, _ := json.Marshal(map[string]any{
 				"status":    400,
-				"error_msg": erro,
+				"error_msg": errorMsg,
 			})
-			fmt.Println(erro)
 			w.WriteHeader(400)
-			w.Write(jsonSstring)
-			//return jsonSstring, 400
-		} else {
-			//[]byte("", "204")
-			//w.Write(json.RawMessage(""), 204)
-			//return json.RawMessage(""), 204
-			w.Write(json.RawMessage(""))
+			w.Write(response)
+			return
 		}
+
+		// success - return empty response with status 204
+		w.WriteHeader(204)
 	}
 }
 
