@@ -38,7 +38,6 @@ func gormGetUserId(db *gorm.DB, username string) (int, error) {
 	user := gorm_models.User{}
 	result := db.Select("user_id").Where("username = ?", username).First(&user)
 	return user.User_id, result.Error
-
 }
 
 func updateLatest(r *http.Request) {
@@ -133,19 +132,23 @@ func messages(database *gorm.DB) http.HandlerFunc {
 			return
 		}
 		// no_msgs = request.args.get("no", type=int, default=100)
-		//no_msgs := r.FormValue("no")
+		noMsgs, err := strconv.Atoi(r.URL.Query().Get("no"))
+		if err != nil || noMsgs <= 0 {
+			noMsgs = 100
+		}
 
 		if r.Method == "GET" {
 			var users []gorm_models.User
-			//same as messages_per_user but without 'where user_id = ?"
-			// MISSING ORDER BY and LIMIT!!
-			database.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0").Find(&users)
+			//Ordering when preloading:
+			//https://github.com/go-gorm/gorm/issues/3004
+			database.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+				db := database.Order("pub_date DESC")
+				return db
+			}).Limit(noMsgs).Find(&users)
+			//fmt.Println("got messages: ")
 			//fmt.Println(users)
 
 			/*query := "SELECT message.*, user.* FROM message, user WHERE message.flagged = 0 AND message.author_id = user.user_id ORDER BY message.pub_date DESC LIMIT ?"
-			messages, err := db.QueryDB(database, query, no_msgs)
-			if err != nil {
-				print(err.Error())
 			}*/
 
 			var filtered_msgs []map[string]any
@@ -176,28 +179,25 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 		//get the username
 		vars := mux.Vars(r)
 		username := vars["username"]
+		noMsgs, err := strconv.Atoi(r.URL.Query().Get("no"))
+		if err != nil || noMsgs <= 0 {
+			noMsgs = 100
+		}
 
-		//no_msgs := r.FormValue("no")
 		if r.Method == "GET" {
-			//user_id, _ := getUserId(database, username)
-			user_id, _ := gormGetUserId(database, username)
-			if user_id == -1 {
-				fmt.Println("messages per user")
-				fmt.Println(username)
+			user_id, err := gormGetUserId(database, username)
+			if err != nil {
 				print("user id not found in db!")
-				//abort(404)
+				panic(404)
 			}
 
 			var users []gorm_models.User
-			database.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0").Where("user_id = ?", user_id).Find(&users)
-			//fmt.Println(users)
-
-			/*database.Model(&gorm_models.User{}).Preload("Messages", database.Where(&gorm_models.Message{Flagged: 0})).Where("user_id = ?", user_id).Find(&users).Error*/
+			database.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+				db := database.Order("pub_date DESC")
+				return db
+			}).Where("user_id = ?", user_id).Limit(noMsgs).Find(&users)
 
 			/*query := "SELECT message.*, user.* FROM message, user WHERE message.flagged = 0 AND user.user_id = message.author_id AND user.user_id = ? ORDER BY message.pub_date DESC LIMIT ?"
-			messages, err := db.QueryDB(database, query, user_id, no_msgs)
-			if err != nil {
-				print(err.Error())
 			}*/
 
 			var filtered_msgs []map[string]any
@@ -211,30 +211,7 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 				}
 			}
 
-			/*var filtered_msgs []map[string]any
-			for messages.Next() {
-				var pubDate string //int64
-				var messageID, authorID, flagged, userID int
-				var text, username, email, pwHash string
-
-				err := messages.Scan(&messageID, &authorID, &text, &pubDate, &flagged, &userID, &username, &email, &pwHash)
-				if err != nil {
-					print(err.Error())
-				}
-
-				fmt.Println("content: ")
-				fmt.Println(text)
-				fmt.Println("user: ")
-				fmt.Println(username)
-
-				filtered_msg := make(map[string]any)
-				filtered_msg["content"] = text
-				filtered_msg["pub_date"] = pubDate
-				filtered_msg["user"] = username
-				filtered_msgs = append(filtered_msgs, filtered_msg)
-			}*/
-
-			err := json.NewEncoder(w).Encode(filtered_msgs)
+			err = json.NewEncoder(w).Encode(filtered_msgs)
 			if err != nil {
 				fmt.Println("failed to convert messages to json")
 				print(err.Error())
@@ -244,24 +221,19 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 			json.NewDecoder(r.Body).Decode(&req)
 			content := req["content"]
 
-			user_id, _ := gormGetUserId(database, username)
+			user_id, err := gormGetUserId(database, username)
+			if err != nil {
+				print("user id not found in db!")
+				panic(404)
+			}
 			message := gorm_models.Message{Author_id: uint(user_id), Text: content.(string), Pub_date: time.Now().GoString()}
-
-			//database.Model(&gorm_models.User{}).Association("Messages").Append(message)
 
 			result := database.Create(&message)
 			if result.Error != nil {
 				log.Fatalf("Failed to insert in db: %v", result.Error)
 			}
+			/*query := "INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)"*/
 
-			/*query := "INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)"
-			user_id, _ := getUserId(database, username)
-			_, err := database.Exec(query, user_id, content, time.Now())
-			if err != nil {
-				log.Fatalf("Failed to insert in db: %v", err)
-			}*/
-
-			//w.Write([]byte("204"))
 			w.WriteHeader(204)
 		}
 	}
@@ -279,93 +251,72 @@ func follow(database *gorm.DB) http.HandlerFunc {
 		//get the username
 		vars := mux.Vars(r)
 		username := vars["username"]
-		//user_id, _ := getUserId(database, username)
-		user_id, _ := gormGetUserId(database, username)
-		if user_id == -1 {
-			fmt.Println("follow")
-			fmt.Println(username)
+		user_id, err := gormGetUserId(database, username)
+		if err != nil {
 			print("user id not found in db!")
-			//abort(404)
+			panic(404)
 		}
-		//no_followers := r.FormValue("no")
+
+		noMsgs, err := strconv.Atoi(r.URL.Query().Get("no"))
+		if err != nil || noMsgs <= 0 {
+			noMsgs = 100
+		}
 
 		var req map[string]string
 		json.NewDecoder(r.Body).Decode(&req)
-		//content := req["content"]
 
 		if r.Method == "POST" && req["follow"] != "" {
-			fmt.Println("POST and follow!")
-			follows_username := req["follow"] //r.FormValue("follow")
-			//follows_user_id, _ := getUserId(database, follows_username)
-			follows_user_id, _ := gormGetUserId(database, follows_username)
-			if follows_user_id == -1 {
+			follows_username := req["follow"]
+			follows_user_id, err := gormGetUserId(database, follows_username)
+			if err != nil {
+				print("user id not found in db!")
 				// TODO: This has to be another error, likely 500???
-				//abort(404)
-				print("lol error 404 hehe")
+				panic(404)
 			}
+
 			follower := gorm_models.Follower{Who_id: user_id, Whom_id: follows_user_id}
 			result := database.Create(&follower)
 			if result.Error != nil {
 				log.Fatalf("Failed to insert in db: %v", result.Error)
 			}
-
-			/*query := "INSERT INTO follower (who_id, whom_id) VALUES (?, ?)"
-			_, err := database.Exec(query, user_id, follows_user_id)
-			if err != nil {
-				log.Fatalf("Failed to insert in db: %v", err)
-			}*/
+			/*query := "INSERT INTO follower (who_id, whom_id) VALUES (?, ?)"*/
 			w.Write([]byte("204"))
 		} else if r.Method == "POST" && req["unfollow"] != "" {
-			fmt.Println("POST and UNfollow!")
-			unfollows_username := req["unfollow"] //r.FormValue("unfollow")
-			unfollows_user_id, _ := gormGetUserId(database, unfollows_username)
-			if unfollows_user_id == -1 {
+			unfollows_username := req["unfollow"]
+			unfollows_user_id, err := gormGetUserId(database, unfollows_username)
+			if err != nil {
+				print("user id not found in db!")
 				// TODO: This has to be another error, likely 500???
-				//abort(404)
-				print("lol error 404 hehe")
+				panic(404)
 			}
-			//follower := gorm_models.Follower{Who_id: user_id, Whom_id: follows_user_id}
-			result := database.Where("who_id=? AND whom_id=?", user_id, unfollows_user_id)
-			if result.Error != nil {
-				log.Fatalf("Failed to delete from db: %v", result.Error)
+
+			err = database.Where("who_id=? AND whom_id=?", user_id, unfollows_user_id).Delete(&gorm_models.Follower{}).Error
+			if err != nil {
+				fmt.Printf("Failed to delete from db: %v", err)
 			}
 			/*query := "DELETE FROM follower WHERE who_id=? and WHOM_ID=?"
 			database.Exec(query, user_id, unfollows_user_id)*/
-
 			w.Write([]byte("204"))
 		} else if r.Method == "GET" {
-			//no_followers := r.FormValue("no")
+
+			//use noMsgs from top
+			//no_followers := r.FormValue("no")  <----!!!!!
 
 			var users []gorm_models.User
-			//database.Model(&gorm_models.User{}).Preload("Users").Where("who_id=?", user_id).Find(&users)
-			//database.Model(&gorm_models.User{}).Preload("Followers", "user_id=?", user_id).Find(&users)
-			database.Model(&gorm_models.User{}).Preload("Followers").Where("user_id=?", user_id).Find(&users)
-			//database.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0").Where("user_id = ?", user_id).Find(&users)
-			fmt.Println(users)
-
 			//get usernames of users whom given user is following
-			/*query := "SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=user.user_id WHERE follower.who_id=? LIMIT ?"
-			followers, _ := database.Query(query, user_id, no_followers)*/
+			database.Model(&gorm_models.User{}).Preload("Followers").Where("user_id=?", user_id).Limit(noMsgs).Find(&users)
+			/*query := "SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=user.user_id WHERE follower.who_id=? LIMIT ?"*/
 
 			var follower_names []string
 			for _, user := range users {
 				for _, follows := range user.Followers {
-					fmt.Println("username: ")
-					fmt.Println(follows.Username)
+					//fmt.Println("username: ")
+					//fmt.Println(follows.Username)
 					follower_names = append(follower_names, follows.Username)
 				}
 			}
-
-			/*for followers.Next() {
-				var username string
-				err := followers.Scan(&username)
-				if err != nil {
-					print(err.Error())
-				}
-				follower_names = append(follower_names, username)
-			}*/
 			followers_response := map[string]any{"follows": follower_names}
-			fmt.Println(followers_response)
+			//fmt.Println(followers_response)
 			json.NewEncoder(w).Encode(followers_response)
 		}
 	}
