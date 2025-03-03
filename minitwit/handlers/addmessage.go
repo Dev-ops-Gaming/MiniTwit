@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -24,17 +23,12 @@ func AddMessageHandler(database *gorm.DB) http.HandlerFunc {
 		userID := store.Values["user_id"].(int)
 
 		// Insert message into the database
-		message := gorm_models.Message{Author_id: uint(userID), Text: text, Pub_date: time.Now().Unix()} // time.Now().GoString()}
+		message := gorm_models.Message{Author_id: uint(userID), Text: text, Pub_date: time.Now().Unix(), Flagged: 0}
 		result := database.Create(&message)
 		if result.Error != nil {
-			log.Fatalf("Failed to insert in db: %v", result.Error)
-		}
-
-		/*_, err := database.Exec("INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)", userID, text, time.Now().Unix())
-		if err != nil {
 			http.Error(w, "Failed to insert message", http.StatusInternalServerError)
 			return
-		}*/
+		}
 
 		// Redirect to timeline
 		utils.AddFlash(w, r, "Your message was recorded")

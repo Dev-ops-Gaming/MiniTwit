@@ -28,14 +28,8 @@ func FollowHandler(database *gorm.DB) http.HandlerFunc {
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
 		}
-		/*user, err := models.GetUserByUsername(database, username)
-		if err != nil {
-			http.Error(w, "User does not exist", http.StatusBadRequest)
-			return
-		}*/
 
 		// Check if the user is already following the user
-		//isFollowing, err := db.IsUserFollowing(database, session.Values["user_id"].(int), user.ID)
 		isFollowing, err := db.IsUserFollowing(database, session.Values["user_id"].(int), user.User_id)
 		if err != nil {
 			http.Error(w, "Failed to check if user is following", http.StatusInternalServerError)
@@ -54,11 +48,6 @@ func FollowHandler(database *gorm.DB) http.HandlerFunc {
 			http.Error(w, "Failed to follow user", http.StatusInternalServerError)
 			return
 		}
-		/*_, err = database.Exec("INSERT INTO follower (who_id, whom_id) VALUES (?, ?)", session.Values["user_id"], user.ID)
-		if err != nil {
-			http.Error(w, "Failed to follow user", http.StatusInternalServerError)
-			return
-		}*/
 
 		// Redirect to the user's timeline
 		utils.AddFlash(w, r, "You are now following "+username)

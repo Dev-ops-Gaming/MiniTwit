@@ -35,14 +35,4 @@ func GetUserByUsername(database *gorm.DB, username string) (*User, error) {
 func GormUserToModelUser(gormUser *User) *models.User {
 	convertedUser := models.User{ID: gormUser.User_id, Username: gormUser.Username, Email: gormUser.Email, PwHash: gormUser.Pw_hash}
 	return &convertedUser
-
 }
-
-/*func GetUserByUsername(db *sql.DB, username string) (*User, error) {
-	var user User
-	err := db.QueryRow("SELECT user_id, username, email, pw_hash FROM user WHERE username = ?", username).Scan(&user.ID, &user.Username, &user.Email, &user.PwHash)
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
-}*/

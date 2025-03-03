@@ -8,15 +8,18 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
+var PER_PAGE = 30
+
 func Gorm_ConnectDB(database string) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(database), &gorm.Config{
-		// make gorm stop printing errors in terminal
+		// make gorm stop printing errors in terminal as otherwise
 		// gorm will print errors even if they are handled
-		//Logger: logger.Default.LogMode(logger.Silent),
+		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
 		panic("failed to connect database")
@@ -26,9 +29,11 @@ func Gorm_ConnectDB(database string) *gorm.DB {
 }
 
 func AutoMigrateDB(database string) {
-	// Creates the database tables
+	// Creates/Connects to the database tables
 	db := Gorm_ConnectDB(database)
-	err := db.AutoMigrate(&gorm_models.User{}, &gorm_models.Message{}) //, &gorm_models.Follower{})
+	//We only create tables Users and Messages
+	//Table Followers will be created automatically - see gorm_models.User
+	err := db.AutoMigrate(&gorm_models.User{}, &gorm_models.Message{})
 	if err != nil {
 		panic("failed to migrate database tables")
 	}
@@ -37,15 +42,15 @@ func AutoMigrateDB(database string) {
 }
 
 func GormGetUserId(db *gorm.DB, username string) (int, error) {
-	// Get first matched record
 	user := gorm_models.User{}
+	// Get first matched record
 	result := db.Select("user_id").Where("username = ?", username).First(&user)
+	// returns 0, err if nothing found
 	return user.User_id, result.Error
 }
 
-// QueryTimeline
 func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
-	//get list of who user is following
+	//get list of whom user is following
 	var followers []int
 	db.Model(&gorm_models.Follower{}).Where("Who_id = ?", userID).Select("whom_id").Find(&followers)
 
@@ -68,7 +73,6 @@ func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
 	return messages, nil
 }
 
-// QueryUserTimeline
 func QueryUserTimeline(db *gorm.DB, username string) ([]models.Message, error) {
 	var users []gorm_models.User
 	db.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {

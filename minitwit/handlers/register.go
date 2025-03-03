@@ -16,7 +16,6 @@ import (
 
 var registerTmpl = template.Must(template.ParseFiles("templates/layout.html", "templates/register.html"))
 
-// func RegisterHandler(database *sql.DB) http.HandlerFunc {
 func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
@@ -40,11 +39,6 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 				http.Error(w, "Passwords do not match", http.StatusBadRequest)
 			}
 
-			//check if user already exists
-			/*_, err := models.GetUserByUsername(database, username)
-			if err == nil {
-				http.Error(w, "User already exists", http.StatusBadRequest)
-			}*/
 			_, err := db.GormGetUserId(database, username)
 			if err == nil {
 				http.Error(w, "User already exists", http.StatusBadRequest)
@@ -61,9 +55,6 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 			if result.Error != nil {
 				log.Fatalf("Failed to insert in db: %v", err)
 			}
-
-			// insert the user into the database
-			//_, err = database.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", username, email, pwHash)
 
 			// redirect to timeline
 			utils.AddFlash(w, r, "You were successfully registered and can login now")

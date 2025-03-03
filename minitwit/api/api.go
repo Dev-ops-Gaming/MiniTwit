@@ -33,13 +33,6 @@ func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
 	return false
 }
 
-/*func gormGetUserId(db *gorm.DB, username string) (int, error) {
-	// Get first matched record
-	user := gorm_models.User{}
-	result := db.Select("user_id").Where("username = ?", username).First(&user)
-	return user.User_id, result.Error
-}*/
-
 func updateLatest(r *http.Request) {
 	// Get arg value associated with 'latest' & convert to int
 	parsed_command_id := r.FormValue("latest")
@@ -58,7 +51,6 @@ func updateLatest(r *http.Request) {
 	}
 }
 
-// verified working
 func getLatest(w http.ResponseWriter, r *http.Request) {
 	content, err := os.ReadFile("./latest_processed_sim_action_id.txt")
 	if err != nil {
@@ -131,7 +123,7 @@ func messages(database *gorm.DB) http.HandlerFunc {
 		if notReqFromSimulator(w, r) {
 			return
 		}
-		// no_msgs = request.args.get("no", type=int, default=100)
+
 		noMsgs, err := strconv.Atoi(r.URL.Query().Get("no"))
 		if err != nil || noMsgs <= 0 {
 			noMsgs = 100
@@ -145,11 +137,6 @@ func messages(database *gorm.DB) http.HandlerFunc {
 				db := database.Order("pub_date DESC")
 				return db
 			}).Limit(noMsgs).Find(&users)
-			//fmt.Println("got messages: ")
-			//fmt.Println(users)
-
-			/*query := "SELECT message.*, user.* FROM message, user WHERE message.flagged = 0 AND message.author_id = user.user_id ORDER BY message.pub_date DESC LIMIT ?"
-			}*/
 
 			var filtered_msgs []map[string]any
 			for _, user := range users {
@@ -197,9 +184,6 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 				return db
 			}).Where("user_id = ?", user_id).Limit(noMsgs).Find(&users)
 
-			/*query := "SELECT message.*, user.* FROM message, user WHERE message.flagged = 0 AND user.user_id = message.author_id AND user.user_id = ? ORDER BY message.pub_date DESC LIMIT ?"
-			}*/
-
 			var filtered_msgs []map[string]any
 			for _, user := range users {
 				for _, message := range user.Messages {
@@ -226,14 +210,12 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 				print("user id not found in db!")
 				panic(404)
 			}
-			message := gorm_models.Message{Author_id: uint(user_id), Text: content.(string), Pub_date: time.Now().Unix()} //time.Now().GoString()}
+			message := gorm_models.Message{Author_id: uint(user_id), Text: content.(string), Pub_date: time.Now().Unix()}
 
 			result := database.Create(&message)
 			if result.Error != nil {
 				log.Fatalf("Failed to insert in db: %v", result.Error)
 			}
-			/*query := "INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)"*/
-
 			w.WriteHeader(204)
 		}
 	}
@@ -279,8 +261,8 @@ func follow(database *gorm.DB) http.HandlerFunc {
 			if result.Error != nil {
 				log.Fatalf("Failed to insert in db: %v", result.Error)
 			}
-			/*query := "INSERT INTO follower (who_id, whom_id) VALUES (?, ?)"*/
 			w.Write([]byte("204"))
+
 		} else if r.Method == "POST" && req["unfollow"] != "" {
 			unfollows_username := req["unfollow"]
 			unfollows_user_id, err := db.GormGetUserId(database, unfollows_username)
@@ -294,29 +276,20 @@ func follow(database *gorm.DB) http.HandlerFunc {
 			if err != nil {
 				fmt.Printf("Failed to delete from db: %v", err)
 			}
-			/*query := "DELETE FROM follower WHERE who_id=? and WHOM_ID=?"
-			database.Exec(query, user_id, unfollows_user_id)*/
 			w.Write([]byte("204"))
+
 		} else if r.Method == "GET" {
-
-			//use noMsgs from top
-			//no_followers := r.FormValue("no")  <----!!!!!
-
 			var users []gorm_models.User
 			//get usernames of users whom given user is following
 			database.Model(&gorm_models.User{}).Preload("Followers").Where("user_id=?", user_id).Limit(noMsgs).Find(&users)
-			/*query := "SELECT user.username FROM user INNER JOIN follower ON follower.whom_id=user.user_id WHERE follower.who_id=? LIMIT ?"*/
 
 			var follower_names []string
 			for _, user := range users {
 				for _, follows := range user.Followers {
-					//fmt.Println("username: ")
-					//fmt.Println(follows.Username)
 					follower_names = append(follower_names, follows.Username)
 				}
 			}
 			followers_response := map[string]any{"follows": follower_names}
-			//fmt.Println(followers_response)
 			json.NewEncoder(w).Encode(followers_response)
 		}
 	}
