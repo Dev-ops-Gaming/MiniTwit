@@ -33,12 +33,12 @@ func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
 	return false
 }
 
-func gormGetUserId(db *gorm.DB, username string) (int, error) {
+/*func gormGetUserId(db *gorm.DB, username string) (int, error) {
 	// Get first matched record
 	user := gorm_models.User{}
 	result := db.Select("user_id").Where("username = ?", username).First(&user)
 	return user.User_id, result.Error
-}
+}*/
 
 func updateLatest(r *http.Request) {
 	// Get arg value associated with 'latest' & convert to int
@@ -93,7 +93,7 @@ func register(database *gorm.DB) http.HandlerFunc {
 				erro = "You have to enter a valid email address"
 			} else if t.Pwd == "" {
 				erro = "You have to enter a password"
-			} else if _, err := gormGetUserId(database, t.Username); err == nil {
+			} else if _, err := db.GormGetUserId(database, t.Username); err == nil {
 				erro = "The username is already taken"
 			} else {
 				// hash the password
@@ -185,7 +185,7 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 		}
 
 		if r.Method == "GET" {
-			user_id, err := gormGetUserId(database, username)
+			user_id, err := db.GormGetUserId(database, username)
 			if err != nil {
 				print("user id not found in db!")
 				panic(404)
@@ -221,12 +221,12 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 			json.NewDecoder(r.Body).Decode(&req)
 			content := req["content"]
 
-			user_id, err := gormGetUserId(database, username)
+			user_id, err := db.GormGetUserId(database, username)
 			if err != nil {
 				print("user id not found in db!")
 				panic(404)
 			}
-			message := gorm_models.Message{Author_id: uint(user_id), Text: content.(string), Pub_date: time.Now().GoString()}
+			message := gorm_models.Message{Author_id: uint(user_id), Text: content.(string), Pub_date: time.Now().Unix()} //time.Now().GoString()}
 
 			result := database.Create(&message)
 			if result.Error != nil {
@@ -251,7 +251,7 @@ func follow(database *gorm.DB) http.HandlerFunc {
 		//get the username
 		vars := mux.Vars(r)
 		username := vars["username"]
-		user_id, err := gormGetUserId(database, username)
+		user_id, err := db.GormGetUserId(database, username)
 		if err != nil {
 			print("user id not found in db!")
 			panic(404)
@@ -267,7 +267,7 @@ func follow(database *gorm.DB) http.HandlerFunc {
 
 		if r.Method == "POST" && req["follow"] != "" {
 			follows_username := req["follow"]
-			follows_user_id, err := gormGetUserId(database, follows_username)
+			follows_user_id, err := db.GormGetUserId(database, follows_username)
 			if err != nil {
 				print("user id not found in db!")
 				// TODO: This has to be another error, likely 500???
@@ -283,7 +283,7 @@ func follow(database *gorm.DB) http.HandlerFunc {
 			w.Write([]byte("204"))
 		} else if r.Method == "POST" && req["unfollow"] != "" {
 			unfollows_username := req["unfollow"]
-			unfollows_user_id, err := gormGetUserId(database, unfollows_username)
+			unfollows_user_id, err := db.GormGetUserId(database, unfollows_username)
 			if err != nil {
 				print("user id not found in db!")
 				// TODO: This has to be another error, likely 500???

@@ -2,10 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
-
-	"minitwit/models"
-	"minitwit/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -28,9 +24,9 @@ func QueryDB(db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
 	return rows, nil
 }
 
-func QueryTimeline(db *sql.DB, userID int) ([]models.Message, error) {
+/*func QueryTimeline(db *sql.DB, userID int) ([]models.Message, error) {
 	rows, err := QueryDB(db, `
-		select message.*, user.* 
+		select message.*, user.*
 		from message, user
         where message.flagged = 0 and message.author_id = user.user_id and (
             user.user_id = ? or
@@ -61,9 +57,9 @@ func QueryTimeline(db *sql.DB, userID int) ([]models.Message, error) {
 		messages = append(messages, m)
 	}
 	return messages, nil
-}
+}*/
 
-func QueryUserTimeline(db *sql.DB, username string) ([]models.Message, error) {
+/*func QueryUserTimeline(db *sql.DB, username string) ([]models.Message, error) {
 	rows, err := QueryDB(db, `
 		SELECT message.author_id, user.username, message.text, message.pub_date, user.email
 		FROM message
@@ -88,9 +84,9 @@ func QueryUserTimeline(db *sql.DB, username string) ([]models.Message, error) {
 		messages = append(messages, m)
 	}
 	return messages, nil
-}
+}*/
 
-func QueryPublicTimeline(db *sql.DB) ([]models.Message, error) {
+/*func QueryPublicTimeline(db *sql.DB) ([]models.Message, error) {
 	rows, err := QueryDB(db, `
 		SELECT message.author_id, user.username, message.text, message.pub_date, user.email
 		FROM message
@@ -115,9 +111,9 @@ func QueryPublicTimeline(db *sql.DB) ([]models.Message, error) {
 		messages = append(messages, m)
 	}
 	return messages, nil
-}
+}*/
 
-func IsUserFollowing(db *sql.DB, whoID, whomID int) (bool, error) {
+/*func IsUserFollowing(db *sql.DB, whoID, whomID int) (bool, error) {
 	var count int
 	row := db.QueryRow("SELECT COUNT(*) FROM follower WHERE who_id = ? AND whom_id = ?", whoID, whomID)
 	err := row.Scan(&count)
@@ -125,4 +121,4 @@ func IsUserFollowing(db *sql.DB, whoID, whomID int) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
-}
+}*/

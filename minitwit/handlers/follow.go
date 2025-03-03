@@ -1,17 +1,17 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"minitwit/db"
-	"minitwit/models"
+	"minitwit/gorm_models"
 	"minitwit/utils"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
-func FollowHandler(database *sql.DB) http.HandlerFunc {
+func FollowHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := utils.GetSession(r)
 		if session.Values["user_id"] == nil {
@@ -23,14 +23,20 @@ func FollowHandler(database *sql.DB) http.HandlerFunc {
 		// Get the user to follow
 		vars := mux.Vars(r)
 		username := vars["username"]
-		user, err := models.GetUserByUsername(database, username)
+		user, err := gorm_models.GetUserByUsername(database, username)
 		if err != nil {
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
 		}
+		/*user, err := models.GetUserByUsername(database, username)
+		if err != nil {
+			http.Error(w, "User does not exist", http.StatusBadRequest)
+			return
+		}*/
 
 		// Check if the user is already following the user
-		isFollowing, err := db.IsUserFollowing(database, session.Values["user_id"].(int), user.ID)
+		//isFollowing, err := db.IsUserFollowing(database, session.Values["user_id"].(int), user.ID)
+		isFollowing, err := db.IsUserFollowing(database, session.Values["user_id"].(int), user.User_id)
 		if err != nil {
 			http.Error(w, "Failed to check if user is following", http.StatusInternalServerError)
 			return
@@ -42,11 +48,17 @@ func FollowHandler(database *sql.DB) http.HandlerFunc {
 		}
 
 		// Insert the follow into the database
-		_, err = database.Exec("INSERT INTO follower (who_id, whom_id) VALUES (?, ?)", session.Values["user_id"], user.ID)
-		if err != nil {
+		follower := gorm_models.Follower{Who_id: session.Values["user_id"].(int), Whom_id: user.User_id}
+		result := database.Create(&follower)
+		if result.Error != nil {
 			http.Error(w, "Failed to follow user", http.StatusInternalServerError)
 			return
 		}
+		/*_, err = database.Exec("INSERT INTO follower (who_id, whom_id) VALUES (?, ?)", session.Values["user_id"], user.ID)
+		if err != nil {
+			http.Error(w, "Failed to follow user", http.StatusInternalServerError)
+			return
+		}*/
 
 		// Redirect to the user's timeline
 		utils.AddFlash(w, r, "You are now following "+username)

@@ -1,17 +1,18 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"minitwit/db"
+	"minitwit/gorm_models"
 	"minitwit/models"
 	"minitwit/utils"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
-func UserTimelineHandler(database *sql.DB) http.HandlerFunc {
+func UserTimelineHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
@@ -21,11 +22,12 @@ func UserTimelineHandler(database *sql.DB) http.HandlerFunc {
 		}
 
 		username := vars["username"]
-		profileUser, err := models.GetUserByUsername(database, username)
+		user, err := gorm_models.GetUserByUsername(database, username)
 		if err != nil {
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
 		}
+		profileUser := gorm_models.GormUserToModelUser(user)
 
 		messages, err := db.QueryUserTimeline(database, username)
 		if err != nil {

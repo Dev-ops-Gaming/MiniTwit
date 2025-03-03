@@ -2,18 +2,22 @@ package handlers
 
 import (
 	"crypto/md5"
-	"database/sql"
 	"encoding/hex"
+	"log"
 	"net/http"
 	"text/template"
 
-	"minitwit/models"
+	"minitwit/db"
+	"minitwit/gorm_models"
 	"minitwit/utils"
+
+	"gorm.io/gorm"
 )
 
 var registerTmpl = template.Must(template.ParseFiles("templates/layout.html", "templates/register.html"))
 
-func RegisterHandler(database *sql.DB) http.HandlerFunc {
+// func RegisterHandler(database *sql.DB) http.HandlerFunc {
+func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			if err := registerTmpl.Execute(w, nil); err != nil {
@@ -37,7 +41,11 @@ func RegisterHandler(database *sql.DB) http.HandlerFunc {
 			}
 
 			//check if user already exists
-			_, err := models.GetUserByUsername(database, username)
+			/*_, err := models.GetUserByUsername(database, username)
+			if err == nil {
+				http.Error(w, "User already exists", http.StatusBadRequest)
+			}*/
+			_, err := db.GormGetUserId(database, username)
 			if err == nil {
 				http.Error(w, "User already exists", http.StatusBadRequest)
 			}
@@ -48,7 +56,14 @@ func RegisterHandler(database *sql.DB) http.HandlerFunc {
 			pwHash := hex.EncodeToString(hash.Sum(nil))
 
 			// insert the user into the database
-			_, err = database.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", username, email, pwHash)
+			user := gorm_models.User{Username: username, Email: email, Pw_hash: pwHash}
+			result := database.Create(&user)
+			if result.Error != nil {
+				log.Fatalf("Failed to insert in db: %v", err)
+			}
+
+			// insert the user into the database
+			//_, err = database.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", username, email, pwHash)
 
 			// redirect to timeline
 			utils.AddFlash(w, r, "You were successfully registered and can login now")

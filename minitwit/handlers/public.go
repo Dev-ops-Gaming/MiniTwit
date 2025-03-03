@@ -1,15 +1,16 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"minitwit/db"
 	"minitwit/models"
 	"minitwit/utils"
+
+	"gorm.io/gorm"
 )
 
-func PublicTimelineHandler(database *sql.DB) http.HandlerFunc {
+func PublicTimelineHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		messages, err := db.QueryPublicTimeline(database)
 		if err != nil {
