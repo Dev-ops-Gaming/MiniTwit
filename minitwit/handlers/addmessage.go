@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"minitwit/gorm_models"
+	"minitwit/models"
 	"minitwit/utils"
 
 	"gorm.io/gorm"
@@ -23,7 +23,7 @@ func AddMessageHandler(database *gorm.DB) http.HandlerFunc {
 		userID := store.Values["user_id"].(int)
 
 		// Insert message into the database
-		message := gorm_models.Message{Author_id: uint(userID), Text: text, Pub_date: time.Now().Unix(), Flagged: 0}
+		message := models.Message{Author_id: uint(userID), Text: text, Pub_date: time.Now().Unix(), Flagged: 0}
 		result := database.Create(&message)
 		if result.Error != nil {
 			http.Error(w, "Failed to insert message", http.StatusInternalServerError)

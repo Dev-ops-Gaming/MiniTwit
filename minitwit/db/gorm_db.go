@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"minitwit/gorm_models"
 	"minitwit/models"
 	"minitwit/utils"
 
@@ -33,7 +32,7 @@ func AutoMigrateDB(database string) {
 	db := Gorm_ConnectDB(database)
 	//We only create tables Users and Messages
 	//Table Followers will be created automatically - see gorm_models.User
-	err := db.AutoMigrate(&gorm_models.User{}, &gorm_models.Message{})
+	err := db.AutoMigrate(&models.User{}, &models.Message{})
 	if err != nil {
 		panic("failed to migrate database tables")
 	}
@@ -42,7 +41,7 @@ func AutoMigrateDB(database string) {
 }
 
 func GormGetUserId(db *gorm.DB, username string) (int, error) {
-	user := gorm_models.User{}
+	user := models.User{}
 	// Get first matched record
 	result := db.Select("user_id").Where("username = ?", username).First(&user)
 	// returns 0, err if nothing found
@@ -52,10 +51,10 @@ func GormGetUserId(db *gorm.DB, username string) (int, error) {
 func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
 	//get list of whom user is following
 	var followers []int
-	db.Model(&gorm_models.Follower{}).Where("Who_id = ?", userID).Select("whom_id").Find(&followers)
+	db.Model(&models.Follower{}).Where("Who_id = ?", userID).Select("whom_id").Find(&followers)
 
 	//get all messages made by either current user or people they're following
-	var users []gorm_models.User
+	var users []models.User
 	db.Table("Users").Where("user_id = ? OR user_id IN ?", userID, followers).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
 		db := database.Order("pub_date DESC")
 		return db
@@ -65,7 +64,7 @@ func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
 	for _, user := range users {
 		for _, message := range user.Messages {
 			//convert gorm_models.message to models.message
-			m := models.Message{ID: message.Message_id, Author: user.Username, Content: message.Text, Email: user.Email}
+			m := models.Message{Message_id: message.Message_id, Author: user.Username, Text: message.Text, Email: user.Email}
 			m.PubDate = utils.FormatTime(message.Pub_date) // Convert timestamp from UNIX to readable format
 			messages = append(messages, m)
 		}
@@ -74,8 +73,8 @@ func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
 }
 
 func QueryUserTimeline(db *gorm.DB, username string) ([]models.Message, error) {
-	var users []gorm_models.User
-	db.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+	var users []models.User
+	db.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
 		db := database.Order("pub_date DESC")
 		return db
 	}).Where("Username = ?", username).Limit(PER_PAGE).Find(&users)
@@ -84,7 +83,7 @@ func QueryUserTimeline(db *gorm.DB, username string) ([]models.Message, error) {
 	for _, user := range users {
 		for _, message := range user.Messages {
 			//convert gorm_models.message to models.message
-			m := models.Message{ID: message.Message_id, Author: user.Username, Content: message.Text, Email: user.Email}
+			m := models.Message{Message_id: message.Message_id, Author: user.Username, Text: message.Text, Email: user.Email}
 			m.PubDate = utils.FormatTime(message.Pub_date) // Convert timestamp from UNIX to readable format
 			messages = append(messages, m)
 		}
@@ -93,8 +92,8 @@ func QueryUserTimeline(db *gorm.DB, username string) ([]models.Message, error) {
 }
 
 func QueryPublicTimeline(db *gorm.DB) ([]models.Message, error) {
-	var users []gorm_models.User
-	db.Model(&gorm_models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+	var users []models.User
+	db.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
 		db := database.Order("pub_date DESC")
 		return db
 	}).Limit(PER_PAGE).Find(&users)
@@ -103,7 +102,7 @@ func QueryPublicTimeline(db *gorm.DB) ([]models.Message, error) {
 	for _, user := range users {
 		for _, message := range user.Messages {
 			//convert gorm_models.message to models.message
-			m := models.Message{ID: message.Message_id, Author: user.Username, Content: message.Text, Email: user.Email}
+			m := models.Message{Message_id: message.Message_id, Author: user.Username, Text: message.Text, Email: user.Email}
 			m.PubDate = utils.FormatTime(message.Pub_date) // Convert timestamp from UNIX to readable format
 			messages = append(messages, m)
 

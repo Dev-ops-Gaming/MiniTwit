@@ -1,4 +1,4 @@
-package gorm_models
+package models
 
 type Follower struct {
 	Who_id  int

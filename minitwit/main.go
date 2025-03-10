@@ -12,14 +12,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const GORMPATH = "./minitwit_gorm.db"
+const DATABASE = "./minitwit.db"
 
 func main() {
 	// DB abstraction
 	//this MUST be called, otherwise tests fail
 	//seems grom cant read already existing database w/out migration stuff
-	db.AutoMigrateDB(GORMPATH)
-	gorm_db := db.Gorm_ConnectDB(GORMPATH)
+	db.AutoMigrateDB(DATABASE)
+	gorm_db := db.Gorm_ConnectDB(DATABASE)
 
 	// Routes
 	r := mux.NewRouter()
