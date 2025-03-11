@@ -1,29 +1,16 @@
----
-    name: Continuous Deployment
+    name: Deploy services to DigitalOcean
     
     on:
       push:
-        # Run workflow every time something is pushed to the main branch
         branches:
           - main
           - master
-      # allow manual triggers for now too
-      workflow_dispatch:
-    
-    # Remember to set the following secrets in your repository's settings:
-    # https://github.com/your_username/itu-minitwit-ci/settings/secrets/actions
-    # DOCKER_USERNAME
-    # DOCKER_PASSWORD
-    # SSH_USER
-    # SSH_KEY
-    # SSH_HOST
-    
+      workflow_dispatch: 
+        
     jobs:
-      build:
+      build-and-deploy:
         runs-on: ubuntu-latest
-
         environment: minitwit
-    
         steps:
           - name: Checkout
             uses: actions/checkout@v2
@@ -76,7 +63,6 @@
               SSH_KEY: ${{ secrets.ACTIONS_SSH_PRIVATE }}
     
           - name: Deploy to server
-            # Configure the ~./bash_profile and deploy.sh file on the Vagrantfile
             run: >
               ssh $SSH_USER@$SSH_HOST
               -i ~/.ssh/do_ssh_key -o StrictHostKeyChecking=no
