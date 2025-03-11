@@ -1,14 +1,14 @@
 services:
   app:
     build: 
-          context: ../..
+          context: ../../docker
           dockerfile: Dockerfile
     image: pbjh/minitwit-app:latest
     ports:
       - "8080:8080"
   api:
     build:
-      context: ../..
+      context: ../../docker
       dockerfile: Dockerfile.api
     image: pbjh/minitwit-api:latest
     ports:
