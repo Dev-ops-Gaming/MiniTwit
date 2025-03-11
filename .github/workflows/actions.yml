@@ -57,8 +57,8 @@
               file: ./Dockerfile-minitwit
               push: true
               tags: pbjh/minitwit-app:latest
-              cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/minitwit-app:webbuildcache
-              cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/minitwit-app:webbuildcache,mode=max
+              cache-from: type=registry,ref=pbjh/minitwit-app:webbuildcache
+              cache-to: type=registry,ref=pbjh/minitwit-app:webbuildcache,mode=max
 
           - name: Build and push minitwit-api
             uses: docker/build-push-action@v6
@@ -67,8 +67,8 @@
                 file: ./Dockerfile-minitwit
                 push: true
                 tags: pbjh/minitwit-api:latest
-                cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/minitwit-api:webbuildcache
-                cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/minitwit-api:webbuildcache,mode=max
+                cache-from: type=registry,ref=pbjh/minitwit-api:webbuildcache
+                cache-to: type=registry,ref=pbjh/minitwit-api:webbuildcache,mode=max
 
           - name: Configure SSH
             run: |
