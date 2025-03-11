@@ -7,9 +7,6 @@
         branches:
           - main
           - master
-          - refactor/*
-          - feature/*
-          - bugfix/*
       # allow manual triggers for now too
       workflow_dispatch:
     
