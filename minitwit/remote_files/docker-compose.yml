@@ -2,16 +2,16 @@ services:
   app:
     container_name: minitwit-app
     build: 
-          context: ../../docker
-          dockerfile: Dockerfile
+          context: ../../
+          dockerfile: docker/Dockerfile
     image: pbjh/minitwit-app:latest
     ports:
       - "8080:8080"
   api:
     container_name: minitwit-api
     build:
-      context: ../../docker
-      dockerfile: Dockerfile.api
+      context: ../../
+      dockerfile: docker/Dockerfile.api
     image: pbjh/minitwit-api:latest
     ports:
       - "8081:8081"
