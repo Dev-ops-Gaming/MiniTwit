@@ -5,21 +5,21 @@ import (
 	"minitwit/gorm_models"
 	"minitwit/models"
 	"minitwit/utils"
+	"os"
 
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var PER_PAGE = 30
 
-func Gorm_ConnectDB(database string) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(database), &gorm.Config{
+func Gorm_ConnectDB() *gorm.DB {
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s", os.Getenv("db_host"), os.Getenv("db_user"), os.Getenv("db_password"), os.Getenv("db_dbname"), os.Getenv("db_port"), os.Getenv("db_sslmode"), os.Getenv("db_timeZone"))
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		// make gorm stop printing errors in terminal as otherwise
 		// gorm will print errors even if they are handled
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
 		panic("failed to connect database")
@@ -28,9 +28,9 @@ func Gorm_ConnectDB(database string) *gorm.DB {
 	return db
 }
 
-func AutoMigrateDB(database string) {
+func AutoMigrateDB() {
 	// Creates/Connects to the database tables
-	db := Gorm_ConnectDB(database)
+	db := Gorm_ConnectDB()
 	//We only create tables Users and Messages
 	//Table Followers will be created automatically - see gorm_models.User
 	err := db.AutoMigrate(&gorm_models.User{}, &gorm_models.Message{})
