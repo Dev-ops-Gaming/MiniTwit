@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: minitwit-app
     build: 
           context: ../../docker
           dockerfile: Dockerfile
@@ -7,6 +8,7 @@ services:
     ports:
       - "8080:8080"
   api:
+    container_name: minitwit-api
     build:
       context: ../../docker
       dockerfile: Dockerfile.api
@@ -15,13 +17,19 @@ services:
       - "8081:8081"
 
   prometheus:
+    container_name: minitwit-prometheus
     image: prom/prometheus
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    environment:
+      - LOG_LEVEL=warn
 
   grafana:
+    container_name: minitwit-grafana
     image: grafana/grafana
     ports:
       - "3000:3000"
+    environment:
+      - GF_LOG_LEVEL=warn
