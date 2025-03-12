@@ -11,6 +11,8 @@ import (
 	"minitwit/handlers"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -28,6 +30,11 @@ func main() {
 
 	// Routes
 	r := mux.NewRouter()
+
+	// expose metrics
+	r.Handle("/metrics", promhttp.Handler())
+
+	// general routes
 	r.HandleFunc("/", handlers.TimelineHandler(database)).Methods("GET")
 	r.HandleFunc("/public", handlers.PublicTimelineHandler(database)).Methods("GET")
 	r.HandleFunc("/register", handlers.RegisterHandler(database)).Methods("GET", "POST")
