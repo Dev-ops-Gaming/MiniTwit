@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	// HTTP request metrics
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -30,22 +29,37 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration)
+	prometheus.MustRegister(httpRequestsTotal)
+	prometheus.MustRegister(httpRequestDuration)
 }
 
-// Collects metrics for HTTP requests
 func PrometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
+		start := time.Now()
 
-		// Record status code of response
-		wrappedWriter := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-		next.ServeHTTP(wrappedWriter, r)
+		// wrap response writer
+		ww := &responseWriterWrapper{ResponseWriter: w, statusCode: 200}
 
-		// Record metrics
-		path := getRoutePath(r)
-		httpRequestsTotal.WithLabelValues(path, r.Method, strconv.Itoa(wrappedWriter.statusCode)).Inc()
-		httpRequestDuration.WithLabelValues(path, r.Method).Observe(time.Since(startTime).Seconds())
+		next.ServeHTTP(ww, r)
+
+		// Get path from route
+		var path string
+		route := mux.CurrentRoute(r)
+		if route != nil {
+			var err error
+			path, err = route.GetPathTemplate()
+			if err != nil {
+				path = "unknown"
+			}
+		} else {
+			path = "unknown"
+		}
+
+		duration := time.Since(start).Seconds()
+		statusCode := strconv.Itoa(ww.statusCode)
+
+		httpRequestsTotal.WithLabelValues(path, r.Method, statusCode).Inc()
+		httpRequestDuration.WithLabelValues(path, r.Method).Observe(duration)
 	})
 }
 
@@ -57,13 +71,4 @@ type responseWriterWrapper struct {
 func (rww *responseWriterWrapper) WriteHeader(code int) {
 	rww.statusCode = code
 	rww.ResponseWriter.WriteHeader(code)
-}
-
-func getRoutePath(r *http.Request) string {
-	if route := mux.CurrentRoute(r); route != nil {
-		if path, err := route.GetPathTemplate(); err == nil {
-			return path
-		}
-	}
-	return "unknown"
 }
