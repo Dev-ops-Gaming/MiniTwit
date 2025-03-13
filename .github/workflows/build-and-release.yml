@@ -1,0 +1,13 @@
+name: Build and release our Minitwit services (automatically)
+
+on:
+  schedule:
+    - cron: '23 17 * * 4'
+
+    jobs:
+      name: Test if the workflow runs
+      runs-on: ubuntu-latest
+      steps:
+        - name: Test if the workflow runs
+          run: echo "The workflow ran!"
+
