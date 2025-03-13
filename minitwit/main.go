@@ -9,6 +9,7 @@ import (
 
 	"minitwit/db"
 	"minitwit/handlers"
+	"minitwit/middleware"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,6 +31,9 @@ func main() {
 
 	// Routes
 	r := mux.NewRouter()
+
+	// Middleware
+	r.Use(middleware.PrometheusMiddleware)
 
 	// expose metrics
 	r.Handle("/metrics", promhttp.Handler())
