@@ -2,12 +2,16 @@ name: Build and release our Minitwit services (automatically)
 
 on:
   schedule:
-    - cron: '23 17 * * 4'
+  - cron: '27 17 * * 4'
 
-    jobs:
-      name: Test if the workflow runs
-      runs-on: ubuntu-latest
-      steps:
-        - name: Test if the workflow runs
-          run: echo "The workflow ran!"
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Echo
+      run: echo "Hello, world!"
+
 
