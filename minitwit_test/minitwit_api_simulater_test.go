@@ -133,9 +133,11 @@ func getLatest(t *testing.T) int {
 }
 
 func TestLatest(t *testing.T) {
+	// In TestLatest
+	testUsername := fmt.Sprintf("test_%d", time.Now().UnixNano())
 	data := map[string]string{
-		"username": "test",
-		"email":    "test@test",
+		"username": testUsername,
+		"email":    testUsername + "@test.com",
 		"pwd":      "foo",
 	}
 	params := map[string]interface{}{
