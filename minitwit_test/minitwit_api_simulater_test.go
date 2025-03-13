@@ -1,4 +1,4 @@
-package minitwit_test
+package minitwit_api_simulater_test
 
 import (
 	"bytes"
