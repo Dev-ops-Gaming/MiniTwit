@@ -5,7 +5,6 @@
         branches:
           - main
           - master
-          - enhancement/monitoring
       workflow_dispatch: 
         
     jobs:
