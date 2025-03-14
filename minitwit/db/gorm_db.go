@@ -55,7 +55,7 @@ func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
 
 	//get all messages made by either current user or people they're following
 	var users []models.User
-	db.Table("Users").Where("user_id = ? OR user_id IN ?", userID, followers).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+	db.Table("users").Where("user_id = ? OR user_id IN ?", userID, followers).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
 		db := database.Order("pub_date DESC")
 		return db
 	}).Limit(PER_PAGE).Find(&users)

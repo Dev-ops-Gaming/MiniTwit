@@ -24,7 +24,7 @@ type User struct {
 
 func GetUserByUsername(database *gorm.DB, username string) (*User, error) {
 	var user User
-	err := database.Table("Users").Where("username = ?", username).First(&user).Error
+	err := database.Table("users").Where("username = ?", username).First(&user).Error
 	if err != nil {
 		fmt.Println("got error:")
 		fmt.Println(err)
