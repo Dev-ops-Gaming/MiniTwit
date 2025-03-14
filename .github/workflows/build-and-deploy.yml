@@ -5,6 +5,7 @@
         branches:
           - main
           - master
+          - bug/*
       workflow_dispatch: 
         
     jobs:
