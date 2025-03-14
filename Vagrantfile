@@ -4,6 +4,7 @@ Vagrant.configure("2") do |config|
   
     config.vm.synced_folder "minitwit/remote_files", "/minitwit", type: "rsync"
     config.vm.synced_folder '.', '/vagrant', disabled: true
+
   
     config.vm.define "main" do |main|
       main.vm.provider :digital_ocean do |provider|
@@ -13,6 +14,8 @@ Vagrant.configure("2") do |config|
         provider.region = "fra1"
         provider.size = "s-1vcpu-1gb"
         provider.image = "ubuntu-22-04-x64"
+        provider.private_networking = false
+        provider.ipv6 = false
       end
   
       # Set Docker credentials as environment variables
@@ -50,6 +53,23 @@ Vagrant.configure("2") do |config|
         docker-compose up -d
   
         # Display running containers
+        docker ps
+      SHELL
+
+       
+        main.vm.provision "deploy", type: "shell", inline: <<-SHELL
+        
+        echo "Logging in to Docker Hub..."
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+        cd /minitwit
+        echo "Pulling latest images..."
+        docker-compose pull
+        
+        echo "Restarting services..."
+        docker-compose up -d
+
+        echo "Current running containers:"
         docker ps
       SHELL
     end

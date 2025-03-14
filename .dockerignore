@@ -1,0 +1,5 @@
+.github/
+.git/
+.vagrant/
+README.md
+docker/

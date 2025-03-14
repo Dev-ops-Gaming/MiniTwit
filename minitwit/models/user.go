@@ -11,7 +11,7 @@ type User struct {
 	Username string
 	Email    string
 	Pwd      string `gorm:"-"` //for register API
-	Pw_hash  string
+	PwHash   string
 	//'Has many' relationship - message
 	Messages []Message `gorm:"foreignKey:Author_id;references:User_id"`
 	//Self-referential 'Many to Many' relationship - follow
