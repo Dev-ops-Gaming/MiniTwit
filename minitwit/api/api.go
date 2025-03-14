@@ -15,11 +15,17 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
 )
 
-const DATABASE = "../minitwit.db"
+func init() {
+	// Load environment variables
+	if err := godotenv.Load("../../.env"); err != nil {
+		log.Println("Error loading .env file")
+	}
+}
 
 func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
 	from_simulator := r.Header.Get("Authorization")
@@ -92,7 +98,7 @@ func register(database *gorm.DB) http.HandlerFunc {
 				hash.Write([]byte(r.Form.Get("pwd")))
 				pwHash := hex.EncodeToString(hash.Sum(nil))
 				// insert the user into the database
-				user := models.User{Username: t.Username, Email: t.Email, Pw_hash: pwHash}
+				user := models.User{Username: t.Username, Email: t.Email, PwHash: pwHash}
 				result := database.Create(&user)
 				if result.Error != nil {
 					log.Fatalf("Failed to insert in db: %v", err)
@@ -132,35 +138,24 @@ func messages(database *gorm.DB) http.HandlerFunc {
 		if r.Method == "GET" {
 			// modified the given API to remove some unnecessary select
 			// might improve performance a bit
-			rows, err := db.QueryDB(database,
-				`SELECT message.text, message.pub_date, user.username
-				 FROM message JOIN user ON message.author_id = user.user_id
-				 WHERE message.flagged = 0
-				 ORDER BY message.pub_date DESC
-				 LIMIT ?`, noMsgs)
-			if err != nil {
-				http.Error(w, `{"status":500, "error_msg":"Database query failed"}`, http.StatusInternalServerError)
-				return
-			}
-			defer rows.Close()
+			var users []models.User
+			database.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+				db := database.Order("pub_date DESC")
+				return db
+			}).Limit(noMsgs).Find(&users)
 
-			var filteredMsgs []map[string]any
-			for rows.Next() {
-				var text, pubDate, username string
-				if err := rows.Scan(&text, &pubDate, &username); err != nil {
-					http.Error(w, `{"status":500, "error_msg":"Failed to scan database results"}`, http.StatusInternalServerError)
-					return
+			var filtered_msgs []map[string]any
+			for _, user := range users {
+				for _, message := range user.Messages {
+					filtered_msg := make(map[string]any)
+					filtered_msg["content"] = message.Text
+					filtered_msg["pub_date"] = message.Pub_date
+					filtered_msg["user"] = user.Username
+					filtered_msgs = append(filtered_msgs, filtered_msg)
 				}
-
-				filteredMsgs = append(filteredMsgs, map[string]any{
-					"content":  text,
-					"pub_date": pubDate,
-					"user":     username,
-				})
 			}
-
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(filteredMsgs)
+			json.NewEncoder(w).Encode(filtered_msgs)
 		}
 	}
 }
@@ -187,7 +182,6 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 				print("user id not found in db!")
 				panic(404)
 			}
-			defer rows.Close()
 
 			var users []models.User
 			database.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
