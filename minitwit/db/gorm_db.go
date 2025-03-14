@@ -18,7 +18,7 @@ func Gorm_ConnectDB() *gorm.DB {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		// make gorm stop printing errors in terminal as otherwise
 		// gorm will print errors even if they are handled
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
 		panic("failed to connect database")
