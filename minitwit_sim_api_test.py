@@ -12,7 +12,6 @@ from contextlib import closing
 #BASE_URL = 'http://127.0.0.1:5001'
 BASE_URL = 'http://localhost:8081'
 DATABASE = "minitwit/minitwit.db"
-GORMDB = "minitwit/minitwit_gorm.db"
 USERNAME = 'simulator'
 PWD = 'super_safe!'
 CREDENTIALS = ':'.join([USERNAME, PWD]).encode('ascii')
@@ -21,17 +20,9 @@ HEADERS = {'Connection': 'close',
            'Content-Type': 'application/json',
            f'Authorization': f'Basic {ENCODED_CREDENTIALS}'}
 
-
-def init_db():
-    """Creates the database tables."""
-    with closing(sqlite3.connect(DATABASE)) as db:
-        with open("minitwit/schema.sql") as fp:
-            db.cursor().executescript(fp.read())
-        db.commit()
-
 def init_gorm_db():
     """Creates the database tables."""
-    with closing(sqlite3.connect(GORMDB)) as db:
+    with closing(sqlite3.connect(DATABASE)) as db:
         with open("minitwit/gorm_schema.sql") as fp:
             db.cursor().executescript(fp.read())
         db.commit()
@@ -39,7 +30,7 @@ def init_gorm_db():
 # Empty db and init schema for gorm db
 # DOESNT WORK?? Keeps getting trying to write to readonly db
 # have no clue why. It works you just delete and recreate the db in api.go
-#Path(GORMDB).unlink()
+#Path(DATABASE).unlink()
 #init_gorm_db()
 
 # Empty the database and initialize the schema again

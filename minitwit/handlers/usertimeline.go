@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"minitwit/db"
-	"minitwit/gorm_models"
 	"minitwit/models"
 	"minitwit/utils"
 
@@ -22,12 +21,13 @@ func UserTimelineHandler(database *gorm.DB) http.HandlerFunc {
 		}
 
 		username := vars["username"]
-		user, err := gorm_models.GetUserByUsername(database, username)
+		//user, err := gorm_models.GetUserByUsername(database, username)
+		profileUser, err := models.GetUserByUsername(database, username)
 		if err != nil {
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
 		}
-		profileUser := gorm_models.GormUserToModelUser(user)
+		//profileUser := gorm_models.GormUserToModelUser(user)
 
 		messages, err := db.QueryUserTimeline(database, username)
 		if err != nil {
@@ -58,8 +58,8 @@ func UserTimelineHandler(database *gorm.DB) http.HandlerFunc {
 		if session.Values["user_id"] != nil {
 			userID := session.Values["user_id"].(int)
 			username := session.Values["username"].(string)
-			data.User = &models.User{Username: username, ID: userID}
-			data.Followed, err = db.IsUserFollowing(database, userID, profileUser.ID)
+			data.User = &models.User{Username: username, User_id: userID}
+			data.Followed, err = db.IsUserFollowing(database, userID, profileUser.User_id)
 			if err != nil {
 				http.Error(w, "Failed to check if user is following", http.StatusInternalServerError)
 				return

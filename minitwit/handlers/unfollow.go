@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"minitwit/gorm_models"
+	"minitwit/models"
 	"minitwit/utils"
 
 	"github.com/gorilla/mux"
@@ -22,14 +22,14 @@ func UnfollowHandler(database *gorm.DB) http.HandlerFunc {
 		// Get the user to unfollow
 		vars := mux.Vars(r)
 		username := vars["username"]
-		user, err := gorm_models.GetUserByUsername(database, username)
+		user, err := models.GetUserByUsername(database, username)
 		if err != nil {
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
 		}
 
 		// Delete the follow from the database
-		err = database.Where("who_id=? AND whom_id=?", session.Values["user_id"], user.User_id).Delete(&gorm_models.Follower{}).Error
+		err = database.Where("who_id=? AND whom_id=?", session.Values["user_id"], user.User_id).Delete(&models.Follower{}).Error
 		if err != nil {
 			http.Error(w, "Failed to unfollow user", http.StatusInternalServerError)
 			return

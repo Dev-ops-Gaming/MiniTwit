@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"minitwit/db"
-	"minitwit/gorm_models"
+	"minitwit/models"
 	"minitwit/utils"
 
 	"github.com/gorilla/mux"
@@ -23,7 +23,7 @@ func FollowHandler(database *gorm.DB) http.HandlerFunc {
 		// Get the user to follow
 		vars := mux.Vars(r)
 		username := vars["username"]
-		user, err := gorm_models.GetUserByUsername(database, username)
+		user, err := models.GetUserByUsername(database, username)
 		if err != nil {
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
@@ -42,7 +42,7 @@ func FollowHandler(database *gorm.DB) http.HandlerFunc {
 		}
 
 		// Insert the follow into the database
-		follower := gorm_models.Follower{Who_id: session.Values["user_id"].(int), Whom_id: user.User_id}
+		follower := models.Follower{Who_id: session.Values["user_id"].(int), Whom_id: user.User_id}
 		result := database.Create(&follower)
 		if result.Error != nil {
 			http.Error(w, "Failed to follow user", http.StatusInternalServerError)

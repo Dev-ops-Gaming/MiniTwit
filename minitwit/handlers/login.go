@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"text/template"
 
-	"minitwit/gorm_models"
+	"minitwit/models"
 	"minitwit/utils"
 
 	"gorm.io/gorm"
@@ -34,7 +34,7 @@ func LoginHandler(database *gorm.DB) http.HandlerFunc {
 			password := r.FormValue("password")
 
 			//check if user exists
-			user, err := gorm_models.GetUserByUsername(database, username)
+			user, err := models.GetUserByUsername(database, username)
 			if err != nil {
 				http.Error(w, "Error getting user from db", http.StatusInternalServerError)
 				fmt.Println("Error getting user from db")

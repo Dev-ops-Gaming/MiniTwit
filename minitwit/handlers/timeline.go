@@ -44,7 +44,7 @@ func TimelineHandler(database *gorm.DB) http.HandlerFunc {
 			Flashes  []interface{}
 		}{
 			Messages: messages,
-			User:     models.User{Username: username, ID: userID},
+			User:     models.User{Username: username, User_id: userID},
 			PageType: "timeline",
 			Flashes:  utils.GetFlashes(w, r),
 		}

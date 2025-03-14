@@ -8,7 +8,7 @@ import (
 	"text/template"
 
 	"minitwit/db"
-	"minitwit/gorm_models"
+	"minitwit/models"
 	"minitwit/utils"
 
 	"gorm.io/gorm"
@@ -50,7 +50,7 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 			pwHash := hex.EncodeToString(hash.Sum(nil))
 
 			// insert the user into the database
-			user := gorm_models.User{Username: username, Email: email, Pw_hash: pwHash}
+			user := models.User{Username: username, Email: email, Pw_hash: pwHash}
 			result := database.Create(&user)
 			if result.Error != nil {
 				log.Fatalf("Failed to insert in db: %v", err)
