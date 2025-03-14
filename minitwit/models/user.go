@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type User struct {

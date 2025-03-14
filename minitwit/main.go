@@ -9,17 +9,22 @@ import (
 	"minitwit/handlers"
 
 	"github.com/gorilla/mux"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/joho/godotenv"
 )
 
-const DATABASE = "./minitwit.db"
+func init() {
+	// Load environment variables
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Println("Error loading .env file")
+	}
+}
 
 func main() {
 	// DB abstraction
 	//this MUST be called, otherwise tests fail
 	//seems grom cant read already existing database w/out migration stuff
-	db.AutoMigrateDB(DATABASE)
-	gorm_db := db.Gorm_ConnectDB(DATABASE)
+	db.AutoMigrateDB()
+	gorm_db := db.Gorm_ConnectDB()
 
 	// Routes
 	r := mux.NewRouter()
