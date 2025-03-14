@@ -45,7 +45,7 @@ func LoginHandler(database *gorm.DB) http.HandlerFunc {
 			hash.Write([]byte(password))
 			pwHash := hex.EncodeToString(hash.Sum(nil))
 
-			if pwHash != user.Pw_hash {
+			if pwHash != user.PwHash {
 				http.Error(w, "Invalid password", http.StatusBadRequest)
 				fmt.Println("Invalid password")
 				return
