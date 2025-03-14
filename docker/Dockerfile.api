@@ -2,12 +2,11 @@ FROM golang:1.23
 
 WORKDIR /go/src/minitwit
 
-
-COPY minitwit/go.mod minitwit/go.sum ./
+COPY ../minitwit/go.mod ../minitwit/go.sum ./
 
 RUN go mod download
 
-COPY minitwit/ ./
+COPY ../minitwit/ ./
 
 RUN cd api && go build -o api
 

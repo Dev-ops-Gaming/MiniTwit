@@ -1,0 +1,78 @@
+name: Release MiniTwit (automatically)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  automatic-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Fetch latest version tag
+        id: get_latest_tag
+        run: |
+          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || echo "v0.0.0")
+          echo "Latest tag found: $LATEST_TAG"
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Determine next version
+        id: versioning
+        run: |
+          LATEST_TAG=${{ env.latest_tag }}
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            NEW_VERSION="v1.0.0"
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG//v/}"
+            PATCH=$((PATCH + 1))
+            NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+          fi
+          
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Validate against SemVar pattern
+        id: validate_version
+        run: |
+          VERSION=${{ steps.versioning.outputs.version }}
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          LATEST_TAG=${{ env.latest_tag }}
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            echo "First release, including all commits."
+            COMMITS=$(git log --pretty=format:"* %s (%h)")
+          else
+            echo "Changelog since last release ($LATEST_TAG)"
+            COMMITS=$(git log $LATEST_TAG..HEAD --pretty=format:"* %s (%h)")
+          fi
+          
+          {
+            echo "## MiniTwit Release ${{ steps.versioning.outputs.version }}"
+            echo "### Released on $(date +'%d-%m-%Y')"
+            echo ""
+            echo "### Changes"
+            echo "$COMMITS"
+          } > release_notes.md
+
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.versioning.outputs.version }}
+          tag_name: ${{ steps.versioning.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}

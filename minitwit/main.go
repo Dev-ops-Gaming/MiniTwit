@@ -7,9 +7,12 @@ import (
 
 	"minitwit/db"
 	"minitwit/handlers"
+	"minitwit/middleware"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func init() {
@@ -28,6 +31,15 @@ func main() {
 
 	// Routes
 	r := mux.NewRouter()
+
+
+	// Middleware
+	r.Use(middleware.PrometheusMiddleware)
+
+	// expose metrics
+	r.Handle("/metrics", promhttp.Handler())
+
+	// general routes
 	r.HandleFunc("/", handlers.TimelineHandler(gorm_db)).Methods("GET")
 	r.HandleFunc("/public", handlers.PublicTimelineHandler(gorm_db)).Methods("GET")
 	r.HandleFunc("/register", handlers.RegisterHandler(gorm_db)).Methods("GET", "POST")
