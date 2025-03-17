@@ -10,6 +10,7 @@
       hadolint:
         runs-on: ubuntu-latest
         environment: minitwit
+        if: github.event.issue.pull_request
         steps:
           - name: Checkout
             uses: actions/checkout@v2
@@ -26,9 +27,9 @@
               dockerfile: docker/Dockerfile.api
             id: api
 
-          - name: Update Pull Request
+          - name: Add comment to Pull Request
             uses: actions/github-script@v6
-            if: github.event.pull_request
+            if: always()
             with:
               script: |
                 const output = `
