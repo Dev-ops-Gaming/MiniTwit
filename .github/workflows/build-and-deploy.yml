@@ -5,17 +5,9 @@
         branches:
           - main
           - master
-          - enhancement/static_analysis_tools
       workflow_dispatch: 
         
     jobs:
-      linter:
-        runs-on: ubuntu-latest
-        environment: minitwit
-        steps:
-          - name: Hadolint Action
-            uses: hadolint/hadolint-action@v3.1.0
-
       build-and-deploy:
         runs-on: ubuntu-latest
         environment: minitwit

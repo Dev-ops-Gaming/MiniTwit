@@ -1,0 +1,25 @@
+    name: Use Hadolint on dockerfiles
+    
+    on:
+      push:
+        branches:
+          - enhancement/static_analysis_tools
+      workflow_dispatch: 
+        
+    jobs:
+      linter:
+        runs-on: ubuntu-latest
+        environment: minitwit
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v2
+
+          - name: Hadolint Action
+            uses: hadolint/hadolint-action@v3.1.0
+            with: 
+              dockerfile: docker/Dockerfile
+
+          - name: Hadolint Action API
+            uses: hadolint/hadolint-action@v3.1.0
+            with: 
+              dockerfile: docker/Dockerfile.api
