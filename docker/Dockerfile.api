@@ -8,7 +8,9 @@ RUN go mod download
 
 COPY ../minitwit/ ./
 
-RUN cd api && go build -o api
+WORKDIR /api
+
+RUN go build -o api
 
 WORKDIR /go/src/minitwit/api
 
