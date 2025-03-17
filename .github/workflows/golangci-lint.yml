@@ -20,6 +20,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - id: set-modules
+        working-directory: ./minitwit
         run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> $GITHUB_OUTPUT
 
   golangci-lint:
