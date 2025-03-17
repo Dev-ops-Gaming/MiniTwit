@@ -3,8 +3,7 @@ name: Run golangci-lint tool
 on:
   push:
     branches:
-      - main
-      - master
+      - enhancement/static_analysis_tools
   pull_request:
 
 permissions:
@@ -16,6 +15,7 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
+    environment: minitwit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
