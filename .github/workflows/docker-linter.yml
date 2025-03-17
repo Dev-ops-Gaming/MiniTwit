@@ -18,19 +18,21 @@
             uses: hadolint/hadolint-action@v3.1.0
             with: 
               dockerfile: docker/Dockerfile
+            id: app
 
           - name: Hadolint Action api
             uses: hadolint/hadolint-action@v3.1.0
             with: 
               dockerfile: docker/Dockerfile.api
+            id: api
 
           - name: Update Pull Request
             uses: actions/github-script@v6
-            if: github.event_name == 'pull_request'
+            if: github.event.pull_request
             with:
               script: |
                 const output = `
-                #### Hadolint: \`${{ steps.hadolint.outcome }}\`
+                #### Hadolint: \`${{ steps.app.outcome }}\`
                 \`\`\`
                 ${process.env.HADOLINT_RESULTS}
                 \`\`\`
