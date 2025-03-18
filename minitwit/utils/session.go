@@ -48,13 +48,10 @@ func GetFlashes(w http.ResponseWriter, r *http.Request) []interface{} {
 func GetSession(r *http.Request, w http.ResponseWriter) (*sessions.Session, error) {
 	session, err := store.Get(r, "minitwit-session")
 	if err != nil {
-		if err.Error() == "securecookie: the value is not valid" {
-			// Handle invalid cookie case
-			session.Options.MaxAge = -1
-			session.Save(r, w)
-			http.Redirect(w, r, "/login", 419)
-		}
-		return session, err
+		// Handle invalid cookie case
+		session.Options.MaxAge = -1
+		session.Save(r, w)
+		http.Redirect(w, r, "/login", 419)
 	}
-	return session, nil
+	return session, err
 }
