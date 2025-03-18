@@ -53,6 +53,8 @@ func GetSession(r *http.Request, w http.ResponseWriter) (*sessions.Session, erro
 			session.Options.MaxAge = -1
 			session.Save(r, w)
 			http.Redirect(w, r, "/login", 419)
+		}
+		return session, err
 	}
-	return session, err
+	return session, nil
 }
