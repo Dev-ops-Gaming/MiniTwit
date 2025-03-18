@@ -51,8 +51,7 @@ func QueryTimeline(db *sql.DB, userID int) ([]models.Message, error) {
 		var text, username, email, pwHash string
 
 		err := rows.Scan(&messageID, &authorID, &text, &pubDate, &flagged, &userID, &username, &email, &pwHash)
-		var m models.Message
-		m = models.Message{ID: messageID, Author: username, Content: text, Email: email}
+		m := models.Message{ID: messageID, Author: username, Content: text, Email: email}
 		m.PubDate = utils.FormatTime(pubDate) // Convert timestamp from UNIX to readable format
 		if err != nil {
 			fmt.Println("Error in queryTimeline: ", err)
