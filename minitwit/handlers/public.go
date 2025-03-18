@@ -30,7 +30,7 @@ func PublicTimelineHandler(database *sql.DB) http.HandlerFunc {
 			Flashes:  utils.GetFlashes(w, r),
 		}
 
-		session, _ := utils.GetSession(r)
+		session, _ := utils.GetSession(r, w)
 
 		// User is logged in
 		if session.Values["user_id"] != nil {

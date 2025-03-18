@@ -16,7 +16,7 @@ var tmpl = template.Must(template.New("layout.html").Funcs(template.FuncMap{
 
 func TimelineHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, err := utils.GetSession(r)
+		session, err := utils.GetSession(r, w)
 		if err != nil {
 			http.Error(w, "Failed to get session", http.StatusInternalServerError)
 			return
