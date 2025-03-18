@@ -49,11 +49,10 @@ func GetSession(r *http.Request, w http.ResponseWriter) (*sessions.Session, erro
 	session, err := store.Get(r, "minitwit-session")
 	if err != nil {
 		if err.Error() == "securecookie: the value is not valid" {
-
 			// Handle invalid cookie case
 			session.Options.MaxAge = -1
 			session.Save(r, w)
-		}
+			http.Redirect(w, r, "/login", 419)
 	}
 	return session, err
 }
