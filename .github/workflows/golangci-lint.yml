@@ -1,46 +1,46 @@
-name: Run golangci-lint tool
+    name: Run golangci-lint tool
 
-on:
-  push:
-    branches:
-      - enhancement/static_analysis_tools
-  workflow_dispatch:
+    on:
+      push:
+        branches:
+          - enhancement/static_analysis_tools
+      workflow_dispatch:
 
-env:
-  GO_VERSION: stable
-  GOLANGCI_LINT_VERSION: v1.64
+    env:
+      GO_VERSION: stable
+      GOLANGCI_LINT_VERSION: v1.64
 
-jobs:
-  detect-modules:
-    runs-on: ubuntu-latest
-    outputs:
-      modules: ${{ steps.set-modules.outputs.modules }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - id: set-modules
-        working-directory: ./minitwit
-        run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> $GITHUB_OUTPUT
+    jobs:
+      detect-modules:
+        runs-on: ubuntu-latest
+        outputs:
+          modules: ${{ steps.set-modules.outputs.modules }}
+        steps:
+          - uses: actions/checkout@v4
+          - uses: actions/setup-go@v5
+            with:
+              go-version: ${{ env.GO_VERSION }}
+          - id: set-modules
+            working-directory: ./minitwit
+            run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> $GITHUB_OUTPUT
 
-  golangci-lint:
-    needs: detect-modules
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      # First, format code using gofmt
-      # This will find all .go files in root and subdirectories
-      - script: go fmt ./..
-      # Then use linter
-      - name: golangci-lint ${{ matrix.modules }}
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
-          working-directory: ${{ matrix.modules }}
+      golangci-lint:
+        needs: detect-modules
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
+        steps:
+          - uses: actions/checkout@v4
+          - uses: actions/setup-go@v5
+            with:
+              go-version: ${{ env.GO_VERSION }}
+          # First, format code using gofmt
+          # This will find all .go files in root and subdirectories
+          - script: go fmt ./..
+          # Then use linter
+          - name: golangci-lint ${{ matrix.modules }}
+            uses: golangci/golangci-lint-action@v6
+            with:
+              version: ${{ env.GOLANGCI_LINT_VERSION }}
+              working-directory: ${{ matrix.modules }}
