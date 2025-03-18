@@ -10,7 +10,7 @@ import (
 
 func AddMessageHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		store, _ := utils.GetSession(r)
+		store, _ := utils.GetSession(r, w)
 		if store.Values["user_id"] == nil {
 			http.Error(w, "You are not logged in", http.StatusBadRequest)
 			return
