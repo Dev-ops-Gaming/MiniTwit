@@ -30,7 +30,7 @@
         - uses: actions/checkout@v4
           # Format code using gofmt
           # This will find all .go files in root and subdirectories
-          run: go fmt ./..
+        - run: go fmt ./..
 
       golangci-lint:
         needs: detect-modules
