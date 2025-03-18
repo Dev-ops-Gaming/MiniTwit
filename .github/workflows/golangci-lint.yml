@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - enhancement/static_analysis_tools
+  workflow_dispatch:
 
 env:
   GO_VERSION: stable
