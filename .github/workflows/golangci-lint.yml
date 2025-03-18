@@ -30,7 +30,10 @@
         - uses: actions/checkout@v4
           # Format code using gofmt
           # This will find all .go files in root and subdirectories
-        - run: go fmt ./..
+        - name: Check code formatting using gofmt
+          uses: Jerome1337/gofmt-action@v1.0.5
+          with: 
+            gofmt-path: './minitwit'
 
       golangci-lint:
         needs: detect-modules
