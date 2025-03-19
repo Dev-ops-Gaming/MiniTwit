@@ -13,7 +13,7 @@
         uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@staging
       
       call-golangci:
-        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/golanci-lint.yml@staging
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/golangci-lint.yml@staging
 
       build-and-deploy:
         runs-on: ubuntu-latest
