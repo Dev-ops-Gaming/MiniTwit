@@ -5,6 +5,8 @@
         branches:
           - main
           - master
+        branches-ignore:
+          - enhancement/static_analysis_tools
       workflow_dispatch: 
         
     jobs:
