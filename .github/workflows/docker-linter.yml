@@ -5,6 +5,8 @@
     #    branches:
     #      - enhancement/static_analysis_tools
     #  workflow_dispatch: 
+
+    # To make workflow reusable
     on:
       workflow_call:
         

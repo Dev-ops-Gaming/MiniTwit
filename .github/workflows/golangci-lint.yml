@@ -1,12 +1,14 @@
     name: Run golangci-lint tool
 
-  #makes sense to run on push to staging and main
-  # as it should fix/abort build if fails
+    #on:
+    #  push:
+    #    branches:
+    #      - enhancement/static_analysis_tools
+    #  workflow_dispatch:
+
+    # To make workflow reusable
     on:
-      push:
-        branches:
-          - enhancement/static_analysis_tools
-      workflow_dispatch:
+      workflow_call:
 
     env:
       GO_VERSION: stable
