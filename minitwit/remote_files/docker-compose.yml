@@ -51,3 +51,8 @@ services:
       - GF_LOG_LEVEL=warn
     depends_on:
       - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+volumes:
+  grafana-storage:
