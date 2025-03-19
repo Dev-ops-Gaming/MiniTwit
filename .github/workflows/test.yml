@@ -7,6 +7,6 @@
       workflow_dispatch:
 
     jobs:
-       call-hadolint:
-         runs-on: ubuntu-latest
-         uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@enhancement/static_analysis_tools
+      call-hadolint:
+        runs-on: ubuntu-latest
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@enhancement/static_analysis_tools
