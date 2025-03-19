@@ -8,8 +8,17 @@
       workflow_dispatch: 
         
     jobs:
+      #Calling reusable workflows
+      call-hadolint:
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@staging
+      
+      call-golangci:
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/golangci-lint.yml@staging
+
       build-and-deploy:
         runs-on: ubuntu-latest
+        # this job should not run if these jobs fail
+        needs: [call-hadolint, call-golanci]
         environment: minitwit
         steps:
           - name: Checkout
