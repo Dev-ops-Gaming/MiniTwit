@@ -108,7 +108,7 @@ func QueryPublicTimeline(db *gorm.DB) ([]models.Message, error) {
 
 func IsUserFollowing(db *gorm.DB, whoID, whomID int) (bool, error) {
 	var count int64
-	err := db.Table("Followers").Where("who_id = ? AND whom_id = ?", whoID, whomID).Count(&count).Error
+	err := db.Table("followers").Where("who_id = ? AND whom_id = ?", whoID, whomID).Count(&count).Error
 	if err != nil {
 		return false, err
 	}
