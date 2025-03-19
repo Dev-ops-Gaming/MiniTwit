@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"minitwit/db"
+	"minitwit/middleware"
 	"minitwit/models"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/gorm"
 )
 
@@ -309,6 +311,12 @@ func main() {
 	gorm_db := db.Gorm_ConnectDB()
 
 	r := mux.NewRouter()
+
+	// Middleware
+	r.Use(middleware.PrometheusMiddleware)
+
+	// expose metrics
+	r.Handle("/metrics", promhttp.Handler())
 
 	// Define routes
 	r.HandleFunc("/register", register(gorm_db)).Methods("POST")
