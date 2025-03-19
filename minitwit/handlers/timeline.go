@@ -1,20 +1,21 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 	"text/template"
 
 	"minitwit/db"
 	"minitwit/models"
 	"minitwit/utils"
+
+	"gorm.io/gorm"
 )
 
 var tmpl = template.Must(template.New("layout.html").Funcs(template.FuncMap{
 	"getGravatar": utils.GetGravatar, // Register the getGravatar function with the template - ugly but can't find a better way
 }).ParseFiles("templates/layout.html", "templates/timeline.html"))
 
-func TimelineHandler(database *sql.DB) http.HandlerFunc {
+func TimelineHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := utils.GetSession(r)
 		if err != nil {
@@ -31,7 +32,6 @@ func TimelineHandler(database *sql.DB) http.HandlerFunc {
 		username := session.Values["username"].(string)
 
 		messages, err := db.QueryTimeline(database, userID)
-
 		if err != nil {
 			http.Error(w, "Failed to load timeline", http.StatusInternalServerError)
 			return
@@ -44,7 +44,7 @@ func TimelineHandler(database *sql.DB) http.HandlerFunc {
 			Flashes  []interface{}
 		}{
 			Messages: messages,
-			User:     models.User{Username: username, ID: userID},
+			User:     models.User{Username: username, User_id: userID},
 			PageType: "timeline",
 			Flashes:  utils.GetFlashes(w, r),
 		}
@@ -52,5 +52,6 @@ func TimelineHandler(database *sql.DB) http.HandlerFunc {
 		if err := tmpl.Execute(w, data); err != nil {
 			http.Error(w, "Failed to render template", http.StatusInternalServerError)
 		}
+
 	}
 }

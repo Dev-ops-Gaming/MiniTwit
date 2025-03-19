@@ -1,36 +1,37 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"minitwit/db"
 	"minitwit/handlers"
 	"minitwit/middleware"
 
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/joho/godotenv"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const DBPATH = "./minitwit.db"
-
-var database *sql.DB
+func init() {
+	// Load environment variables
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Println("Error loading .env file")
+	}
+}
 
 func main() {
-	// Db logic
-	database, err := db.ConnectDB(DBPATH)
-	if err != nil {
-		log.Fatalf("Failed to connect to the database: %v", err)
-	}
-	defer database.Close()
+	// DB abstraction
+	//this MUST be called, otherwise tests fail
+	//seems grom cant read already existing database w/out migration stuff
+	db.AutoMigrateDB()
+	gorm_db := db.Gorm_ConnectDB()
 
 	// Routes
 	r := mux.NewRouter()
+
 
 	// Middleware
 	r.Use(middleware.PrometheusMiddleware)
@@ -39,15 +40,15 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	// general routes
-	r.HandleFunc("/", handlers.TimelineHandler(database)).Methods("GET")
-	r.HandleFunc("/public", handlers.PublicTimelineHandler(database)).Methods("GET")
-	r.HandleFunc("/register", handlers.RegisterHandler(database)).Methods("GET", "POST")
-	r.HandleFunc("/login", handlers.LoginHandler(database)).Methods("GET", "POST")
+	r.HandleFunc("/", handlers.TimelineHandler(gorm_db)).Methods("GET")
+	r.HandleFunc("/public", handlers.PublicTimelineHandler(gorm_db)).Methods("GET")
+	r.HandleFunc("/register", handlers.RegisterHandler(gorm_db)).Methods("GET", "POST")
+	r.HandleFunc("/login", handlers.LoginHandler(gorm_db)).Methods("GET", "POST")
 	r.HandleFunc("/logout", handlers.LogoutHandler()).Methods("GET")
-	r.HandleFunc("/{username}", handlers.UserTimelineHandler(database)).Methods("GET")
-	r.HandleFunc("/{username}/follow", handlers.FollowHandler(database)).Methods("GET", "POST")
-	r.HandleFunc("/{username}/unfollow", handlers.UnfollowHandler(database)).Methods("GET", "POST")
-	r.HandleFunc("/add_message", handlers.AddMessageHandler(database)).Methods("POST")
+	r.HandleFunc("/{username}", handlers.UserTimelineHandler(gorm_db)).Methods("GET")
+	r.HandleFunc("/{username}/follow", handlers.FollowHandler(gorm_db)).Methods("GET", "POST")
+	r.HandleFunc("/{username}/unfollow", handlers.UnfollowHandler(gorm_db)).Methods("GET", "POST")
+	r.HandleFunc("/add_message", handlers.AddMessageHandler(gorm_db)).Methods("POST")
 
 	// Serve static files
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -55,23 +56,4 @@ func main() {
 	// Start the server
 	fmt.Println("Server is running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
-}
-
-func InitDB() {
-	// Creates the database tables
-	db, err := db.ConnectDB(DBPATH)
-	if err != nil {
-		log.Fatalf("Failed to connect to the database: %v", err)
-	}
-	defer db.Close()
-
-	file, err := os.ReadFile("schema.sql")
-	if err != nil {
-		log.Fatalf("Failed to read sql script: %v", err)
-	}
-	fileAsString := string(file)
-	_, err = db.Exec(fileAsString)
-	if err != nil {
-		log.Fatalf("Failed to create the database tables: %v", err)
-	}
 }

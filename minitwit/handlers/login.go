@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"crypto/md5"
-	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -10,9 +9,11 @@ import (
 
 	"minitwit/models"
 	"minitwit/utils"
+
+	"gorm.io/gorm"
 )
 
-func LoginHandler(database *sql.DB) http.HandlerFunc {
+func LoginHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		store, _ := utils.GetSession(r)
 
@@ -39,7 +40,6 @@ func LoginHandler(database *sql.DB) http.HandlerFunc {
 				fmt.Println("Error getting user from db")
 				return
 			}
-
 			// compare the given password with the hashed password in the database
 			hash := md5.New()
 			hash.Write([]byte(password))
@@ -52,7 +52,7 @@ func LoginHandler(database *sql.DB) http.HandlerFunc {
 			}
 
 			// Set session values
-			store.Values["user_id"] = user.ID
+			store.Values["user_id"] = user.User_id
 			store.Values["username"] = user.Username
 			err = store.Save(r, w)
 
