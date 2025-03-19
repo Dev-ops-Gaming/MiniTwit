@@ -1,0 +1,15 @@
+    name: Run static tools for staging
+    
+    on:
+      push:
+        branches:
+          - staging
+      workflow_dispatch: 
+        
+    jobs:
+      #Calling reusable workflows
+      call-hadolint:
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@enhancement/static_analysis_tools
+      
+      call-golangci:
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/golanci-lint.yml@enhancement/static_analysis_tools
