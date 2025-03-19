@@ -25,6 +25,7 @@ func respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	response := map[string]any{"status": code, "error_msg": message}
+	middleware.RecordResponseMessage(code, message)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode error response: %v", err)
 	}
