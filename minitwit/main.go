@@ -10,17 +10,9 @@ import (
 	"minitwit/middleware"
 
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-func init() {
-	// Load environment variables
-	if err := godotenv.Load("../.env"); err != nil {
-		log.Println("Error loading .env file")
-	}
-}
 
 func main() {
 	// DB abstraction
@@ -31,7 +23,6 @@ func main() {
 
 	// Routes
 	r := mux.NewRouter()
-
 
 	// Middleware
 	r.Use(middleware.PrometheusMiddleware)
