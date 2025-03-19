@@ -1,4 +1,4 @@
-    name: test reusable workflow
+    name: Test reusable workflow
 
     on:
       push:
@@ -6,7 +6,7 @@
           - enhancement/static_analysis_tools
       workflow_dispatch:
 
-      jobs:
-        call-hadolint:
-          runs-on: ubuntu-latest
-          uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@enhancement/static_analysis_tools
+    jobs:
+       call-hadolint:
+         runs-on: ubuntu-latest
+         uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@enhancement/static_analysis_tools
