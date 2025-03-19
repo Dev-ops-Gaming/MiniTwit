@@ -1,10 +1,12 @@
     name: Use Hadolint on dockerfiles
     
+    #on:
+    #  push:
+    #    branches:
+    #      - enhancement/static_analysis_tools
+    #  workflow_dispatch: 
     on:
-      push:
-        branches:
-          - enhancement/static_analysis_tools
-      workflow_dispatch: 
+      workflow_call:
         
     jobs:
       hadolint:
