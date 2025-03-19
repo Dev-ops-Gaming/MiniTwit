@@ -29,6 +29,7 @@
             run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> $GITHUB_OUTPUT
 
       format-go-files:
+        needs: format-go-files
         runs-on: ubuntu-latest
         steps:
         - uses: actions/checkout@v4
@@ -40,7 +41,6 @@
             gofmt-path: './minitwit'
 
       golangci-lint:
-        needs: format-go-files
         needs: detect-modules
         runs-on: ubuntu-latest
         strategy:
