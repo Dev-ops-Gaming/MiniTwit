@@ -15,17 +15,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"gorm.io/gorm"
 )
-
-func init() {
-	// Load environment variables
-	if err := godotenv.Load("../../.env"); err != nil {
-		log.Println("Error loading .env file")
-	}
-}
 
 func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
 	from_simulator := r.Header.Get("Authorization")

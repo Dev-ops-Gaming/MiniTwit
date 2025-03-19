@@ -30,14 +30,10 @@ func Gorm_ConnectDB() *gorm.DB {
 func AutoMigrateDB() {
 	// Creates/Connects to the database tables
 	db := Gorm_ConnectDB()
-	//We only create tables Users and Messages
-	//Table Followers will be created automatically - see gorm_models.User
 	err := db.AutoMigrate(&models.User{}, &models.Message{})
 	if err != nil {
 		panic("failed to migrate database tables")
 	}
-	//according to gorm documentation, doesnt seem like .Close is needed
-	//defer db.Close() ??
 }
 
 func GormGetUserId(db *gorm.DB, username string) (int, error) {
@@ -48,79 +44,72 @@ func GormGetUserId(db *gorm.DB, username string) (int, error) {
 	return user.User_id, result.Error
 }
 
+// helper function to convert users messages to messages
+func convertUserMessagesToMessages(users []models.User) []models.Message {
+	var messages []models.Message
+	for _, user := range users {
+		for _, message := range user.Messages {
+			messages = append(messages, models.Message{
+				Message_id: message.Message_id,
+				Author:     user.Username,
+				Text:       message.Text,
+				Email:      user.Email,
+				PubDate:    utils.FormatTime(message.Pub_date),
+			})
+		}
+	}
+	return messages
+}
+
+// helper function for preloading messages that are not flagged and ordered by pub_date
+func getMessagesQuery(db *gorm.DB) *gorm.DB {
+	return db.Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+		return database.Order("pub_date DESC")
+	})
+}
+
+// Queries the timeline ("/")
 func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
-	//get list of whom user is following
+	// Get list of whom user is following
 	var followers []int
 	db.Model(&models.Follower{}).Where("Who_id = ?", userID).Select("whom_id").Find(&followers)
 
-	//get all messages made by either current user or people they're following
+	// Get all messages made by either current user or people they're following
 	var users []models.User
-	db.Table("users").Where("user_id = ? OR user_id IN ?", userID, followers).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
-		db := database.Order("pub_date DESC")
-		return db
-	}).Limit(PER_PAGE).Find(&users)
+	getMessagesQuery(db).
+		Table("users").
+		Where("user_id = ? OR user_id IN ?", userID, followers).
+		Limit(PER_PAGE).
+		Find(&users)
 
-	var messages []models.Message
-	for _, user := range users {
-		for _, message := range user.Messages {
-			//convert gorm_models.message to models.message
-			m := models.Message{Message_id: message.Message_id, Author: user.Username, Text: message.Text, Email: user.Email}
-			m.PubDate = utils.FormatTime(message.Pub_date) // Convert timestamp from UNIX to readable format
-			messages = append(messages, m)
-		}
-	}
-	return messages, nil
+	return convertUserMessagesToMessages(users), nil
 }
 
+// Queries the user's timeline ("/<username>")
 func QueryUserTimeline(db *gorm.DB, username string) ([]models.Message, error) {
 	var users []models.User
-	db.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
-		db := database.Order("pub_date DESC")
-		return db
-	}).Where("Username = ?", username).Limit(PER_PAGE).Find(&users)
+	getMessagesQuery(db).
+		Where("Username = ?", username).
+		Limit(PER_PAGE).
+		Find(&users)
 
-	var messages []models.Message
-	for _, user := range users {
-		for _, message := range user.Messages {
-			//convert gorm_models.message to models.message
-			m := models.Message{Message_id: message.Message_id, Author: user.Username, Text: message.Text, Email: user.Email}
-			m.PubDate = utils.FormatTime(message.Pub_date) // Convert timestamp from UNIX to readable format
-			messages = append(messages, m)
-		}
-	}
-	return messages, nil
+	return convertUserMessagesToMessages(users), nil
 }
 
+// Queries the public timeline ("/public")
 func QueryPublicTimeline(db *gorm.DB) ([]models.Message, error) {
 	var users []models.User
-	db.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
-		db := database.Order("pub_date DESC")
-		return db
-	}).Limit(PER_PAGE).Find(&users)
+	getMessagesQuery(db).
+		Limit(PER_PAGE).
+		Find(&users)
 
-	var messages []models.Message
-	for _, user := range users {
-		for _, message := range user.Messages {
-			//convert gorm_models.message to models.message
-			m := models.Message{Message_id: message.Message_id, Author: user.Username, Text: message.Text, Email: user.Email}
-			m.PubDate = utils.FormatTime(message.Pub_date) // Convert timestamp from UNIX to readable format
-			messages = append(messages, m)
-
-			//Check message_id! bc of this old query:
-			//SELECT message.author_id, user.username, message.text, message.pub_date, user.email
-			//and this old code. Seems they put author_id in Message.ID instead of message_id??
-			//err := rows.Scan(&m.ID, &m.Author, &m.Content, &pubDate, &m.Email)
-		}
-	}
-	return messages, nil
+	return convertUserMessagesToMessages(users), nil
 }
 
 func IsUserFollowing(db *gorm.DB, whoID, whomID int) (bool, error) {
 	var count int64
 	err := db.Table("Followers").Where("who_id = ? AND whom_id = ?", whoID, whomID).Count(&count).Error
 	if err != nil {
-		fmt.Println("got error when check follow: ")
-		fmt.Println(err)
 		return false, err
 	}
 	return count > 0, nil
