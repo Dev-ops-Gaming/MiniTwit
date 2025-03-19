@@ -55,7 +55,9 @@ func GetSession(r *http.Request, w http.ResponseWriter) (*sessions.Session, erro
 	if err != nil {
 		// Handle invalid cookie case
 		session.Options.MaxAge = -1
-		session.Save(r, w)
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		}
 		http.Redirect(w, r, "/login", 419)
 	}
 	return session, err
