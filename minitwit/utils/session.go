@@ -18,7 +18,9 @@ func AddFlash(w http.ResponseWriter, r *http.Request, message string) {
 		return
 	}
 	session.AddFlash(message)
-	session.Save(r, w)
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+	}
 }
 
 func GetFlashes(w http.ResponseWriter, r *http.Request) []interface{} {
@@ -28,7 +30,10 @@ func GetFlashes(w http.ResponseWriter, r *http.Request) []interface{} {
 		return nil
 	}
 	flashes := session.Flashes()
-	session.Save(r, w)
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		return nil
+	}
 	return flashes
 }
 

@@ -54,7 +54,10 @@ func LoginHandler(database *gorm.DB) http.HandlerFunc {
 			// Set session values
 			store.Values["user_id"] = user.User_id
 			store.Values["username"] = user.Username
-			err = store.Save(r, w)
+			if err := store.Save(r, w); err != nil {
+				http.Error(w, "Failed to save session", http.StatusInternalServerError)
+				return
+			}
 
 			// Redirect to timeline
 			utils.AddFlash(w, r, "You were logged in")
