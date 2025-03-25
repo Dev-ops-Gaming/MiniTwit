@@ -7,6 +7,8 @@ services:
     image: pbjh/minitwit-app:latest
     ports:
       - "8080:8080"
+    networks:
+      - main
     environment:
       - DB_USER
       - DB_PASSWORD
@@ -23,6 +25,8 @@ services:
     image: pbjh/minitwit-api:latest
     ports:
       - "8081:8081"
+    networks:
+      - main
     environment:
       - DB_USER
       - DB_PASSWORD
@@ -76,9 +80,11 @@ services:
   # docker compose --env-file ../../.env down setup
 
   # Then, to build application:
-  # docker compose --env-file ../../.env up build
+  # docker compose --env-file ../../.env build
   # docker compose --env-file ../../.env up -d
   # Elastic available on http://localhost:5601
+  # IF it says 'connection was reset' or smth like that,
+  # then wait like 10 sec and reload the page
   setup:
     profiles:
       - setup
