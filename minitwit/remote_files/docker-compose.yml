@@ -80,7 +80,7 @@ services:
   # docker compose --env-file ../../.env down setup
 
   # Then, to build application:
-  # docker compose --env-file ../../.env build
+  # docker compose --env-file ../../.env build --no-cache
   # docker compose --env-file ../../.env up -d
   # Elastic available on http://localhost:5601
   # IF it says 'connection was reset' or smth like that,

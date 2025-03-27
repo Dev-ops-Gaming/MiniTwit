@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"minitwit/db"
 	"minitwit/middleware"
 	"minitwit/models"
@@ -14,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
@@ -37,6 +39,24 @@ func respondWithSuccess(w http.ResponseWriter, code int, payload any) {
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
 		log.Printf("Failed to encode success response: %v", err)
 	}
+}
+
+func writeLog(path string, method string, ip string, respCode int) {
+	format := new(log.TextFormatter)
+	//timestamp skal nok ændres så det matcher grok DATE_EU
+	// tjek grokdebugger.com
+	format.TimestampFormat = "2006-01-02 15:04:05"
+	format.FullTimestamp = true
+	logrus.SetFormatter(format)
+	logrus.WithFields(
+		logrus.Fields{
+			"logger":       "logrus",
+			"IP":           strings.Split(ip, ":")[0],
+			"method":       method,
+			"path":         path,
+			"responseCode": respCode,
+		},
+	).Info()
 }
 
 func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
@@ -80,7 +100,7 @@ func getLatest(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Failed to convert string to int.")
 		return
 	}
-
+	writeLog(r.URL.Path, r.Method, r.RemoteAddr, http.StatusOK, "get latest")
 	respondWithSuccess(w, http.StatusOK, map[string]int{"latest": latestInt})
 }
 
