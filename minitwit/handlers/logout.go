@@ -8,7 +8,7 @@ import (
 
 func LogoutHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := utils.GetSession(r)
+		session, _ := utils.GetSession(r, w)
 		if session.Values["user_id"] == nil {
 			http.Error(w, "You are not logged in", http.StatusBadRequest)
 			return

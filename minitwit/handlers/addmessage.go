@@ -12,7 +12,7 @@ import (
 
 func AddMessageHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		store, _ := utils.GetSession(r)
+		store, _ := utils.GetSession(r, w)
 		if store.Values["user_id"] == nil {
 			http.Error(w, "You are not logged in", http.StatusBadRequest)
 			return
@@ -21,6 +21,11 @@ func AddMessageHandler(database *gorm.DB) http.HandlerFunc {
 		// Get input from form
 		text := r.FormValue("text")
 		userID := store.Values["user_id"].(int)
+
+		if text == "" {
+			http.Error(w, "Your message cannot be empty", http.StatusBadRequest)
+			return
+		}
 
 		// Insert message into the database
 		message := models.Message{Author_id: uint(userID), Text: text, Pub_date: time.Now().Unix(), Flagged: 0}

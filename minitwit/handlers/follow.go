@@ -13,7 +13,7 @@ import (
 
 func FollowHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := utils.GetSession(r)
+		session, _ := utils.GetSession(r, w)
 		if session.Values["user_id"] == nil {
 			utils.AddFlash(w, r, "You must be logged in to follow users")
 			http.Redirect(w, r, "/login", http.StatusFound)

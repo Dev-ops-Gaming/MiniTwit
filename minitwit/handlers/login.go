@@ -15,7 +15,7 @@ import (
 
 func LoginHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		store, _ := utils.GetSession(r)
+		store, _ := utils.GetSession(r, w)
 
 		if r.Method == "GET" {
 			if store.Values["user_id"] != nil {

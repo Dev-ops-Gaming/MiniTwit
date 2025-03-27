@@ -52,8 +52,7 @@ func UserTimelineHandler(database *gorm.DB) http.HandlerFunc {
 			Flashes:     utils.GetFlashes(w, r),
 		}
 
-		session, _ := utils.GetSession(r)
-
+		session, _ := utils.GetSession(r, w)
 		// User is logged in
 		if session.Values["user_id"] != nil {
 			userID := session.Values["user_id"].(int)

@@ -26,11 +26,25 @@ var (
 		},
 		[]string{"path", "method"},
 	)
+
+	httpResponseMessages = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_response_messages_total",
+			Help: "Total number of HTTP responses by message type",
+		},
+		[]string{"status", "message_type"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDuration)
+	prometheus.MustRegister(httpResponseMessages)
+}
+
+func RecordResponseMessage(status int, messageType string) {
+	statusCode := strconv.Itoa(status)
+	httpResponseMessages.WithLabelValues(statusCode, messageType).Inc()
 }
 
 func PrometheusMiddleware(next http.Handler) http.Handler {

@@ -70,6 +70,12 @@
               ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
             env:
               SSH_KEY: ${{ secrets.ACTIONS_SSH_PRIVATE }}
+
+          - name: Sync files with rsync
+            run: |
+             rsync -avz --delete \
+                -e "ssh -i ~/.ssh/do_ssh_key -o StrictHostKeyChecking=no" \
+                ./remote_files/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/minitwit/
     
           - name: Deploy to server
             run: >

@@ -12,7 +12,7 @@ import (
 
 func UnfollowHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := utils.GetSession(r)
+		session, _ := utils.GetSession(r, w)
 		if session.Values["user_id"] == nil {
 			utils.AddFlash(w, r, "You are not logged in")
 			http.Redirect(w, r, "/login", http.StatusFound)
