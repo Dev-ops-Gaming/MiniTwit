@@ -20,19 +20,22 @@ HEADERS = {'Connection': 'close',
            'Content-Type': 'application/json',
            f'Authorization': f'Basic {ENCODED_CREDENTIALS}'}
 
-
-def init_db():
+def init_gorm_db():
     """Creates the database tables."""
     with closing(sqlite3.connect(DATABASE)) as db:
-        with open("minitwit/schema.sql") as fp:
+        with open("minitwit/gorm_schema.sql") as fp:
             db.cursor().executescript(fp.read())
         db.commit()
 
+# Empty db and init schema for gorm db
+# DOESNT WORK?? Keeps getting trying to write to readonly db
+# have no clue why. It works you just delete and recreate the db in api.go
+#Path(DATABASE).unlink()
+#init_gorm_db()
 
 # Empty the database and initialize the schema again
-Path(DATABASE).unlink()
-init_db()
-
+#Path(DATABASE).unlink()
+#init_db()
 
 def test_latest():
     # post something to update LATEST

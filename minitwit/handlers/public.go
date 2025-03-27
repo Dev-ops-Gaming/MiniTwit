@@ -1,15 +1,16 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"minitwit/db"
 	"minitwit/models"
 	"minitwit/utils"
+
+	"gorm.io/gorm"
 )
 
-func PublicTimelineHandler(database *sql.DB) http.HandlerFunc {
+func PublicTimelineHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		messages, err := db.QueryPublicTimeline(database)
 		if err != nil {
@@ -30,13 +31,13 @@ func PublicTimelineHandler(database *sql.DB) http.HandlerFunc {
 			Flashes:  utils.GetFlashes(w, r),
 		}
 
-		session, _ := utils.GetSession(r)
+		session, _ := utils.GetSession(r, w)
 
 		// User is logged in
 		if session.Values["user_id"] != nil {
 			userID := session.Values["user_id"].(int)
 			username := session.Values["username"].(string)
-			data.User = &models.User{Username: username, ID: userID}
+			data.User = &models.User{Username: username, User_id: userID}
 		}
 
 		if err := tmpl.Execute(w, data); err != nil {

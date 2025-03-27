@@ -8,8 +8,17 @@
       workflow_dispatch: 
         
     jobs:
+      #Calling reusable workflows
+      call-hadolint:
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/docker-linter.yml@staging
+      
+      call-golangci:
+        uses: Dev-ops-Gaming/MiniTwit/.github/workflows/golangci-lint.yml@staging
+
       build-and-deploy:
         runs-on: ubuntu-latest
+        # this job should not run if these jobs fail
+        needs: [call-hadolint, call-golangci]
         environment: minitwit
         steps:
           - name: Checkout
@@ -61,6 +70,12 @@
               ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
             env:
               SSH_KEY: ${{ secrets.ACTIONS_SSH_PRIVATE }}
+
+          - name: Sync files with rsync
+            run: |
+             rsync -avz --delete \
+                -e "ssh -i ~/.ssh/do_ssh_key -o StrictHostKeyChecking=no" \
+                ./minitwit/remote_files/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/minitwit/
     
           - name: Deploy to server
             run: >

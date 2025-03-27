@@ -1,18 +1,18 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"minitwit/models"
 	"minitwit/utils"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
-func UnfollowHandler(database *sql.DB) http.HandlerFunc {
+func UnfollowHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		session, _ := utils.GetSession(r)
+		session, _ := utils.GetSession(r, w)
 		if session.Values["user_id"] == nil {
 			utils.AddFlash(w, r, "You are not logged in")
 			http.Redirect(w, r, "/login", http.StatusFound)
@@ -23,14 +23,13 @@ func UnfollowHandler(database *sql.DB) http.HandlerFunc {
 		vars := mux.Vars(r)
 		username := vars["username"]
 		user, err := models.GetUserByUsername(database, username)
-
 		if err != nil {
 			http.Error(w, "User does not exist", http.StatusBadRequest)
 			return
 		}
 
 		// Delete the follow from the database
-		_, err = database.Exec("DELETE FROM follower WHERE who_id = ? AND whom_id = ?", session.Values["user_id"], user.ID)
+		err = database.Where("who_id=? AND whom_id=?", session.Values["user_id"], user.User_id).Delete(&models.Follower{}).Error
 		if err != nil {
 			http.Error(w, "Failed to unfollow user", http.StatusInternalServerError)
 			return
