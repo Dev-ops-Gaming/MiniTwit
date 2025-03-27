@@ -22,6 +22,11 @@ func AddMessageHandler(database *gorm.DB) http.HandlerFunc {
 		text := r.FormValue("text")
 		userID := store.Values["user_id"].(int)
 
+		if text == "" {
+			http.Error(w, "Your message cannot be empty", http.StatusBadRequest)
+			return
+		}
+
 		// Insert message into the database
 		message := models.Message{Author_id: uint(userID), Text: text, Pub_date: time.Now().Unix(), Flagged: 0}
 		result := database.Create(&message)
