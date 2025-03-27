@@ -75,7 +75,7 @@
             run: |
              rsync -avz --delete \
                 -e "ssh -i ~/.ssh/do_ssh_key -o StrictHostKeyChecking=no" \
-                ./minitwit/remote_files/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/minitwit/
+                ./remote_files/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/minitwit/
     
           - name: Deploy to server
             run: >
