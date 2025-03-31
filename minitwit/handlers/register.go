@@ -32,16 +32,19 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 			// input validation
 			if username == "" || email == "" || password == "" {
 				http.Error(w, "You must fill out all fields", http.StatusBadRequest)
+				return
 			}
 
 			// Check if repeated password matches
 			if password != password2 {
 				http.Error(w, "Passwords do not match", http.StatusBadRequest)
+				return
 			}
 
 			_, err := db.GormGetUserId(database, username)
 			if err == nil {
 				http.Error(w, "User already exists", http.StatusBadRequest)
+				return
 			}
 
 			// hash the password
@@ -54,6 +57,7 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 			result := database.Create(&user)
 			if result.Error != nil {
 				log.Fatalf("Failed to insert in db: %v", err)
+				return
 			}
 
 			// redirect to timeline
