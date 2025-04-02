@@ -71,7 +71,6 @@ services:
       - LOG_LEVEL=warn
 
   grafana:
-    container_name: minitwit-grafana
     image: grafana/grafana
     ports:
       - "3000:3000"
