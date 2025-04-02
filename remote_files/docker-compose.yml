@@ -1,6 +1,5 @@
 services:
   app:
-    #container_name: minitwit-app
     build:
           context: ../
           dockerfile: docker/Dockerfile
@@ -11,7 +10,6 @@ services:
         constraints: [node.role != manager] #dont run services on manager-node
     ports:
       - "8080-8082:8080"
-      #- "8080:8080"
     environment:
       - DB_USER
       - DB_PASSWORD
@@ -20,19 +18,18 @@ services:
       - DB_DBNAME
       - DB_SSLMODE
       - DB_TIMEZONE
+
   api:
-    #container_name: minitwit-api
     build:
       context: ../
       dockerfile: docker/Dockerfile.api
     image: pbjh/minitwit-api:latest
     deploy:
-      replicas: 5
+      replicas: 4
       placement:
         constraints: [node.role != manager]
     ports:
-      - "8083-8088:8081"
-      #- "8081:8081"
+      - "8083-8087:8081"
     environment:
       - DB_USER
       - DB_PASSWORD
