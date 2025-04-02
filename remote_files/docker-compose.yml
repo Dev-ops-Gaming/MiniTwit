@@ -8,6 +8,16 @@ services:
       replicas: 3 #lets start with 3, see if we need more
       placement:
         constraints: [node.role != manager] #dont run services on manager-node
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 30s
+      rollback_config:
+        parallelism: 1 
+        delay: 5s 
+        order: stop-first 
     ports:
       - "8080-8082:8080"
     environment:
@@ -28,6 +38,16 @@ services:
       replicas: 4
       placement:
         constraints: [node.role != manager]
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 30s
+      rollback_config:
+        parallelism: 1 
+        delay: 5s 
+        order: stop-first
     ports:
       - "8083-8087:8081"
     environment:
@@ -40,10 +60,9 @@ services:
       - DB_TIMEZONE
 
   prometheus:
-    #container_name: minitwit-prometheus
     image: prom/prometheus
     deploy:
-      mode: global #make monitoring container global
+      mode: global # run on all nodes
     ports:
       - "9090:9090"
     volumes:
@@ -51,7 +70,6 @@ services:
     environment:
       - LOG_LEVEL=warn
 
-# Guessing we wont need to scale grafana?
   grafana:
     container_name: minitwit-grafana
     image: grafana/grafana
