@@ -1,4 +1,6 @@
 services:
+
+#running with current scaling setup resulted in 18 db connections (seen on digitalocean)
   app:
     build:
           context: ../
