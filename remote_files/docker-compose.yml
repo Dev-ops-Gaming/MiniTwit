@@ -66,6 +66,9 @@ services:
       - minitwit-network
   prometheus:
     image: prom/prometheus
+    deploy:
+      placement:
+        constraints: [node.role != manager]
     ports:
       - "9090:9090"
     volumes:
@@ -77,6 +80,9 @@ services:
 
   grafana:
     image: grafana/grafana
+    deploy:
+      placement:
+        constraints: [node.role != manager]
     ports:
       - "3000:3000"
     environment:
