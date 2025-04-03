@@ -30,6 +30,8 @@ services:
       - DB_DBNAME=${DB_DBNAME}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_TIMEZONE=${DB_TIMEZONE}
+    networks:
+      - minitwit-network
 
   api:
     build:
@@ -60,7 +62,8 @@ services:
       - DB_DBNAME=${DB_DBNAME}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_TIMEZONE=${DB_TIMEZONE}
-
+    networks:
+      - minitwit-network
   prometheus:
     image: prom/prometheus
     deploy:
@@ -71,6 +74,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     environment:
       - LOG_LEVEL=warn
+    networks:
+      - minitwit-network
 
   grafana:
     image: grafana/grafana
@@ -82,6 +87,12 @@ services:
       - prometheus
     volumes:
       - grafana-storage:/var/lib/grafana
+    networks:
+      - minitwit-network
+
+networks:
+  minitwit-network:
+    driver: overlay
 
 volumes:
   grafana-storage:
