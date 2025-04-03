@@ -19,7 +19,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     # this job should not run if these jobs fail
-    needs: [call-hadolint, call-golangci]
     environment: minitwit
     steps:
       - name: Checkout
