@@ -8,8 +8,6 @@ services:
     image: pbjh/minitwit-app:latest
     deploy:
       replicas: 3 #lets start with 3, see if we need more
-      placement:
-        constraints: [node.role != manager] #dont run services on manager-node
       update_config:
         parallelism: 1
         delay: 10s
@@ -38,8 +36,6 @@ services:
     image: pbjh/minitwit-api:latest
     deploy:
       replicas: 4
-      placement:
-        constraints: [node.role != manager]
       update_config:
         parallelism: 1
         delay: 10s
