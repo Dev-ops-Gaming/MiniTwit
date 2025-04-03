@@ -67,12 +67,11 @@ services:
   prometheus:
     image: prom/prometheus
     deploy:
-      placement:
-        constraints: [node.role != manager]
+      mode: global # run on all nodes
     ports:
       - "9090:9090"
     volumes:
-      - prometheus-storage:/var/lib/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     environment:
       - LOG_LEVEL=warn
     networks:
@@ -80,9 +79,6 @@ services:
 
   grafana:
     image: grafana/grafana
-    deploy:
-      placement:
-        constraints: [node.role != manager]
     ports:
       - "3000:3000"
     environment:
@@ -100,4 +96,3 @@ networks:
 
 volumes:
   grafana-storage:
-  prometheus-storage:
