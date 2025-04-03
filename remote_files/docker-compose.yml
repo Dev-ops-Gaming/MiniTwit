@@ -72,7 +72,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-storage:/var/lib/prometheus
     environment:
       - LOG_LEVEL=warn
     networks:
@@ -100,3 +100,4 @@ networks:
 
 volumes:
   grafana-storage:
+  prometheus-storage:
