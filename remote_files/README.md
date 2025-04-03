@@ -30,3 +30,6 @@ The solution right now is not the best
       #- "8080:8080"
 
 Above should solve port allocation problems.
+
+### Manual Testing
+I launched the replicas and manually stopped forwarding port 8081. localhost:8081 still worked just fine, so seems like replicas are working. 
