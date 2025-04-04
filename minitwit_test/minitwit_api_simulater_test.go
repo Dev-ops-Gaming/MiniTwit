@@ -194,34 +194,6 @@ type Message struct {
 	User    string `json:"user"`
 }
 
-// func TestGetLatestUserMsgs(t *testing.T) {
-// 	username := "a"
-// 	params := map[string]interface{}{
-// 		"no":     20,
-// 		"latest": 3,
-// 	}
-
-// 	resp, err := sendRequest("GET", fmt.Sprintf("/msgs/%s", username), nil, params)
-// 	require.NoError(t, err, "Failed to get user messages")
-// 	require.Equal(t, http.StatusOK, resp.StatusCode, "Get user messages request failed with status: %d", resp.StatusCode)
-
-// 	var messages []Message
-// 	err = json.NewDecoder(resp.Body).Decode(&messages)
-// 	require.NoError(t, err, "Failed to decode user messages response")
-// 	resp.Body.Close()
-
-// 	found := false
-// 	for _, msg := range messages {
-// 		if msg.Content == "Blub!" && msg.User == username {
-// 			found = true
-// 			break
-// 		}
-// 	}
-// 	assert.True(t, found, "Could not find posted message in user messages")
-
-// 	latest := getLatest(t)
-// 	assert.Equal(t, 3, latest, "Latest value was not updated correctly")
-// }
 func TestGetLatestMsgs(t *testing.T) {
 	username := "a"
 	params := map[string]interface{}{
