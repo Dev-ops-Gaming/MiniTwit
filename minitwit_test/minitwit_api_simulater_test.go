@@ -231,11 +231,11 @@ func TestGetLatestMsgs(t *testing.T) {
 
 	resp, err := sendRequest("GET", "/msgs", nil, params)
 	require.NoError(t, err, "Failed to get messages")
-	require.Equal(t, http.StatusOK, resp.StatusCode, "Get messages request failed with status: %d", resp.StatusCode)
+	require.Equal(t, http.StatusOK, resp.StatusCode, "Error get messages request failed with status: %d", resp.StatusCode)
 
 	var messages []Message
 	err = json.NewDecoder(resp.Body).Decode(&messages)
-	require.NoError(t, err, "Failed to decode messages response")
+	require.NoError(t, err, "Error failed to decode messages response")
 	resp.Body.Close()
 
 	found := false
