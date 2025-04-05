@@ -100,7 +100,7 @@ func getLatest(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Failed to convert string to int.")
 		return
 	}
-	writeLog(r.URL.Path, r.Method, r.RemoteAddr, http.StatusOK, "get latest")
+	writeLog(r.URL.Path, r.Method, r.RemoteAddr, http.StatusOK)
 	respondWithSuccess(w, http.StatusOK, map[string]int{"latest": latestInt})
 }
 
