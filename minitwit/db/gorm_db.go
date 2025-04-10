@@ -75,6 +75,9 @@ func convertToMessages(messages []tempMessage) []models.Message {
 // fits for all timeline queries
 func queryMessages(db *gorm.DB, whereClause string, args ...interface{}) ([]models.Message, error) {
 	var messages []tempMessage
+	if db == nil {
+		return nil, fmt.Errorf("db is nil")
+	}
 
 	err := db.Table("messages").
 		Select("messages.message_id, messages.author_id, users.username, users.email, messages.text, messages.pub_date").
