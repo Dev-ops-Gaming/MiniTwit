@@ -77,22 +77,22 @@ services:
     networks:
       - minitwit-network
 
-grafana:
-  image: grafana/grafana
-  ports:
-    - "3000:3000"
-  environment:
-    - GF_LOG_LEVEL=warn
-  depends_on:
-    - prometheus
-  volumes:
-    - grafana-storage:/var/lib/grafana
-  networks:
-    - minitwit-network
-  deploy:
-    placement:
-      constraints:
-        - node.hostname == main # only host grafana on main node
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_LOG_LEVEL=warn
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - minitwit-network
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == main # only host grafana on main node
 
 
 networks:
