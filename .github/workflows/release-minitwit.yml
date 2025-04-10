@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - VERSION.md
+      - VERSION
   schedule:
     - cron: '30 23 * * 4' # Every Thursday at 23:30 UTC
   workflow_dispatch:
@@ -28,15 +28,15 @@ jobs:
           echo "Latest tag found: $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
 
-      - name: Read version from VERSION.md
+      - name: Read version from VERSION
         id: read_version_file
         run: |
-          if [ -f VERSION.md ]; then
-            FILE_VERSION=$(cat VERSION.md | tr -d '[:space:]')
-            echo "Version from VERSION.md: $FILE_VERSION"
+          if [ -f VERSION ]; then
+            FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+            echo "Version from VERSION: $FILE_VERSION"
             echo "file_version=$FILE_VERSION" >> $GITHUB_ENV
           else
-            echo "VERSION.md not found. Exiting."
+            echo "VERSION file not found. Exiting."
             exit 1
           fi
 
