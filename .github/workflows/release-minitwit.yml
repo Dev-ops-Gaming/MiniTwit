@@ -1,6 +1,11 @@
-name: Release MiniTwit (automatically)
+name: Release MiniTwit
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
   schedule:
     - cron: '30 23 * * 4' # Every Thursday at 23:30 UTC
   workflow_dispatch:
@@ -23,18 +28,37 @@ jobs:
           echo "Latest tag found: $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
 
+      - name: Read version from VERSION
+        id: read_version_file
+        run: |
+          if [ -f VERSION ]; then
+            FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+            echo "Version from VERSION: $FILE_VERSION"
+            echo "file_version=$FILE_VERSION" >> $GITHUB_ENV
+          else
+            echo "VERSION file not found. Exiting."
+            exit 1
+          fi
+
       - name: Determine next version
         id: versioning
         run: |
           LATEST_TAG=${{ env.latest_tag }}
-          if [ "$LATEST_TAG" = "v0.0.0" ]; then
-            NEW_VERSION="v1.0.0"
+          FILE_VERSION=${{ env.file_version }}
+
+          # Compare versions
+          if [ "$(printf '%s\n' "$FILE_VERSION" "$LATEST_TAG" | sort -V | tail -n 1)" = "$FILE_VERSION" ]; then
+            NEW_VERSION="$FILE_VERSION"
           else
-            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG//v/}"
-            PATCH=$((PATCH + 1))
-            NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+            if [ "$LATEST_TAG" = "v0.0.0" ]; then
+              NEW_VERSION="v1.0.0"
+            else
+              IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG//v/}"
+              PATCH=$((PATCH + 1))
+              NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+            fi
           fi
-          
+
           echo "New version: $NEW_VERSION"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
