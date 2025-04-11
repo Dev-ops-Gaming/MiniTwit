@@ -1,15 +1,15 @@
 services:
 
-#running with current scaling setup resulted in 18 db connections (seen on digitalocean)
+  #running with current scaling setup resulted in 18 db connections (seen on digitalocean)
   app:
     build:
-          context: ../
-          dockerfile: docker/Dockerfile
+      context: ../
+      dockerfile: docker/Dockerfile
     image: pbjh/minitwit-app:latest
     deploy:
       replicas: 3 #lets start with 3, see if we need more
       placement:
-        constraints: [node.role != manager] #dont run services on manager-node
+        constraints: [ node.role != manager ] #dont run services on manager-node
       update_config:
         parallelism: 1
         delay: 10s
@@ -17,9 +17,9 @@ services:
         failure_action: rollback
         monitor: 30s
       rollback_config:
-        parallelism: 1 
-        delay: 5s 
-        order: stop-first 
+        parallelism: 1
+        delay: 5s
+        order: stop-first
     ports:
       - "8080:8080"
     environment:
@@ -41,7 +41,7 @@ services:
     deploy:
       replicas: 4
       placement:
-        constraints: [node.role != manager]
+        constraints: [ node.role != manager ]
       update_config:
         parallelism: 1
         delay: 10s
@@ -49,8 +49,8 @@ services:
         failure_action: rollback
         monitor: 30s
       rollback_config:
-        parallelism: 1 
-        delay: 5s 
+        parallelism: 1
+        delay: 5s
         order: stop-first
     ports:
       - "8081:8081"
@@ -94,18 +94,31 @@ services:
         constraints:
           - node.hostname == main # only host grafana on main node
 
+  # The 'setup' service initializes Elasticsearch users and roles using passwords
+  # from the '.env' file. This is a one-time task during the initial startup.
+  # Subsequent runs reset passwords and roles to defaults.
+
+  # To run (only once):
+  # docker compose --env-file ../.env up setup
+  # docker compose --env-file ../.env down setup
+
+  # To build and start the application:
+  # docker compose --env-file ../.env build --no-cache
+  # docker compose --env-file ../.env up -d
+
+  # Elasticsearch available at http://localhost:5601 (may take ~10s to load).
   setup:
     profiles:
       - setup
     build:
-      context: ../../setup/
+      context: ../setup/
       args:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     init: true
     volumes:
-      - ../../setup/entrypoint.sh:/entrypoint.sh:ro,Z
-      - ../../setup/lib.sh:/lib.sh:ro,Z
-      - ../../setup/roles:/roles:ro,Z
+      - ../setup/entrypoint.sh:/entrypoint.sh:ro,Z
+      - ../setup/lib.sh:/lib.sh:ro,Z
+      - ../setup/roles:/roles:ro,Z
     environment:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
       LOGSTASH_INTERNAL_PASSWORD: ${LOGSTASH_INTERNAL_PASSWORD:-}
@@ -122,11 +135,11 @@ services:
 
   elasticsearch:
     build:
-      context: ../../elasticsearch/
+      context: ../elasticsearch/
       args:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     volumes:
-      - ../../elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - ../elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
       - elasticsearch:/usr/share/elasticsearch/data:Z
     ports:
       - "9200:9200"
@@ -141,12 +154,12 @@ services:
 
   logstash:
     build:
-      context: ../../logstash/
+      context: ../logstash/
       args:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     volumes:
-      - ../../logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
-      - ../../logstash/pipeline:/usr/share/logstash/pipeline:ro,Z
+      - ../logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
+      - ../logstash/pipeline:/usr/share/logstash/pipeline:ro,Z
     ports:
       - "5044:5044"
     environment:
@@ -160,16 +173,16 @@ services:
 
   filebeat:
     extends:
-      file: ../../filebeat/filebeat-compose.yml
+      file: ../filebeat/filebeat-compose.yml
       service: filebeat
 
   kibana:
     build:
-      context: ../../kibana/
+      context: ../kibana/
       args:
         ELASTIC_VERSION: ${ELASTIC_VERSION}
     volumes:
-      - ../../kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+      - ../kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro,Z
     ports:
       - "5601:5601"
     environment:
