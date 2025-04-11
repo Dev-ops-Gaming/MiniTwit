@@ -43,9 +43,9 @@ services:
     image: postgres:latest
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: testpassword
-      POSTGRES_DB: testdb
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "testpassword"
+      POSTGRES_DB: "testdb"
     volumes:
       - local_pgdata:/var/lib/postgresql/data
     ports:
