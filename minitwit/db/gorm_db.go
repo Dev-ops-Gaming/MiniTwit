@@ -32,7 +32,8 @@ func AutoMigrateDB() {
 	db := Gorm_ConnectDB()
 	err := db.AutoMigrate(&models.User{}, &models.Message{})
 	if err != nil {
-		panic("failed to migrate database tables")
+		fmt.Println("Error in AutoMigrateDB - if api and db are running at the same time, this is expected")
+		return
 	}
 }
 
