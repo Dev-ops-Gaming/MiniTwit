@@ -13,7 +13,7 @@ import (
 
 var PER_PAGE = 30
 
-func Gorm_ConnectDB() *gorm.DB {
+func GormConnectDB() *gorm.DB {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s", os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_DBNAME"), os.Getenv("DB_PORT"), os.Getenv("DB_SSLMODE"), os.Getenv("DB_TIMEZONE"))
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		// make gorm stop printing errors in terminal as otherwise
@@ -29,7 +29,7 @@ func Gorm_ConnectDB() *gorm.DB {
 
 func AutoMigrateDB() {
 	// Creates/Connects to the database tables
-	db := Gorm_ConnectDB()
+	db := GormConnectDB()
 	err := db.AutoMigrate(&models.User{}, &models.Message{})
 	if err != nil {
 		panic("failed to migrate database tables")

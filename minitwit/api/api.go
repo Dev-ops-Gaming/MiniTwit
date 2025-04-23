@@ -347,7 +347,7 @@ func main() {
 	//this MUST be called, otherwise tests fail
 	//seems grom cant read already existing database w/out migration stuff
 	db.AutoMigrateDB()
-	gormDB := db.Gorm_ConnectDB()
+	gormDB := db.GormConnectDB()
 
 	r := mux.NewRouter()
 
