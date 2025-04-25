@@ -81,7 +81,6 @@ func isValidEmail(email string) bool {
 	if atIndex < 1 {
 		return false
 	}
-	
 	dotIndex := strings.LastIndex(email, ".")
 	return dotIndex > atIndex && dotIndex < len(email)-1
 }
