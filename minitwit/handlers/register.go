@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"log"
 	"net/http"
+	"strings"
 	"text/template"
 
 	"minitwit/db"
@@ -41,6 +42,12 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 				return
 			}
 
+			// Validate email format
+			if !isValidEmail(email) {
+				http.Error(w, "You have to enter a valid email address", http.StatusBadRequest)
+				return
+			}
+
 			_, err := db.GormGetUserId(database, username)
 			if err == nil {
 				http.Error(w, "User already exists", http.StatusBadRequest)
@@ -65,4 +72,15 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 			http.Redirect(w, r, "/login", http.StatusFound)
 		}
 	}
+}
+
+// isValidEmail validates the email format
+func isValidEmail(email string) bool {
+	// Simple email validation - check for @ symbol and a period after it
+	atIndex := strings.Index(email, "@")
+	if atIndex < 1 {
+		return false
+	}
+	dotIndex := strings.LastIndex(email, ".")
+	return dotIndex > atIndex && dotIndex < len(email)-1
 }
