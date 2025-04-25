@@ -23,62 +23,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-      - name: Set up environment
+      - name: Set up Docker Compose
         run: |
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      - name: Run manual test steps directly
+      - name: Find run_tests.sh script
+        id: find_test_script
         run: |
-          # Display repository structure to see what we're working with
-          echo "Repository structure:"
-          find . -name "Dockerfile*"
-          find . -name "docker-compose*"
-          
-          # Setup test database
-          echo "Setting up test database"
-          docker-compose -f docker/docker-compose.test.yml up -d postgres
-          sleep 15 # Wait for database to be ready
-          
-          # Build and run the application
-          echo "Building application"
-          docker build -t minitwit-app -f docker/Dockerfile .
-          docker-compose -f docker/docker-compose.test.yml up -d minitwit
-          sleep 15 # Wait for application to start
-          
-          # Build and run the tests
-          echo "Building and running tests"
-          if [ -f "docker/Dockerfile.test" ]; then
-            echo "Found Dockerfile.test in docker/"
-            docker build -t minitwit-uitests -f docker/Dockerfile.test .
-          elif [ -f "Dockerfile.test" ]; then
-            echo "Found Dockerfile.test in root"
-            docker build -t minitwit-uitests -f Dockerfile.test .
-          else
-            # Search for the file
-            TEST_DOCKERFILE=$(find . -name "Dockerfile.test" | head -n 1)
-            if [ -n "$TEST_DOCKERFILE" ]; then
-              echo "Found Dockerfile.test at $TEST_DOCKERFILE"
-              docker build -t minitwit-uitests -f "$TEST_DOCKERFILE" .
-            else
-              echo "ERROR: Cannot find Dockerfile.test anywhere in the repository"
-              exit 1
-            fi
+          SCRIPT_PATH=$(find . -name "run_tests.sh" -type f | head -n 1)
+          if [ -z "$SCRIPT_PATH" ]; then
+            echo "Error: run_tests.sh script not found in the repository"
+            exit 1
           fi
-          
-          # Run the tests with abort on container exit
-          docker-compose -f docker/docker-compose.test.yml up --abort-on-container-exit uitests
-          
-          # Check the test result
-          TEST_EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' minitwit-uitests || echo "1")
-          
-          # Cleanup
-          docker-compose -f docker/docker-compose.test.yml down -v
-          
-          # Exit with test result
-          echo "Tests completed with exit code: $TEST_EXIT_CODE"
-          exit $TEST_EXIT_CODE
+          echo "SCRIPT_PATH=${SCRIPT_PATH}" >> $GITHUB_OUTPUT
+          echo "Found test script at: ${SCRIPT_PATH}"
+
+      - name: Run Test Suite
+        run: |
+          cd $(dirname "${{ steps.find_test_script.outputs.SCRIPT_PATH }}")
+          echo "Running tests from directory: $(pwd)"
+          sudo chmod +x ./run_tests.sh
+          sudo ./run_tests.sh
         
   build-and-deploy:
     runs-on: ubuntu-latest

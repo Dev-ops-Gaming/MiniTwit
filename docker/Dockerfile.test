@@ -1,0 +1,71 @@
+FROM python:3.12-slim-bullseye
+
+WORKDIR /app
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    firefox-esr \
+    wget \
+    curl \
+    postgresql-client \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    selenium==4.15.2 \
+    psycopg2-binary==2.9.9 \
+    pytest==7.4.3 \
+    requests==2.31.0
+
+# Install Geckodriver for Selenium
+RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.36.0/geckodriver-v0.36.0-linux64.tar.gz \
+    && tar xzvf geckodriver-v0.36.0-linux64.tar.gz -C /usr/local/bin \
+    && rm geckodriver-v0.36.0-linux64.tar.gz \
+    && chmod +x /usr/local/bin/geckodriver
+
+# Copy test files
+COPY minitwit_test/test_itu_minitwit_ui.py .
+COPY minitwit_test/refactored_minitwit_tests.py .
+COPY minitwit_test/pytest.ini .
+
+# Create test entry script
+RUN echo '#!/bin/bash' > /app/test_entry.sh && \
+    echo 'set -e' >> /app/test_entry.sh && \
+    echo 'echo "Starting test entry script..."' >> /app/test_entry.sh && \
+    echo 'pip list | grep -E "requests|selenium|pytest|psycopg2"' >> /app/test_entry.sh && \
+    echo 'echo "Checking DNS resolution for minitwit..."' >> /app/test_entry.sh && \
+    echo 'getent hosts minitwit || echo "172.17.0.1 minitwit" >> /etc/hosts' >> /app/test_entry.sh && \
+    echo 'echo "Hosts file:"' >> /app/test_entry.sh && \
+    echo 'cat /etc/hosts' >> /app/test_entry.sh && \
+    echo 'echo "DNS servers:"' >> /app/test_entry.sh && \
+    echo 'cat /etc/resolv.conf' >> /app/test_entry.sh && \
+    echo 'echo "Testing connection to minitwit..."' >> /app/test_entry.sh && \
+    echo 'curl -v http://minitwit:8080/ || echo "Connection test failed but continuing"' >> /app/test_entry.sh && \
+    echo 'echo "Waiting for MiniTwit service to be accessible at http://minitwit:8080..."' >> /app/test_entry.sh && \
+    echo 'for i in $(seq 1 30); do' >> /app/test_entry.sh && \
+    echo '  echo "Attempt $i/30: Checking if MiniTwit is ready..."' >> /app/test_entry.sh && \
+    echo '  if curl -s -o /dev/null -w "%{http_code}" http://minitwit:8080/ | grep -q "200\|302"; then' >> /app/test_entry.sh && \
+    echo '    echo "MiniTwit is up and running!"' >> /app/test_entry.sh && \
+    echo '    break' >> /app/test_entry.sh && \
+    echo '  fi' >> /app/test_entry.sh && \
+    echo '  if [ $i -eq 30 ]; then' >> /app/test_entry.sh && \
+    echo '    echo "Error: MiniTwit is not ready after 30 attempts"' >> /app/test_entry.sh && \
+    echo '    # Continue anyway for debugging purposes' >> /app/test_entry.sh && \
+    echo '  fi' >> /app/test_entry.sh && \
+    echo '  echo "Waiting 2 seconds..."' >> /app/test_entry.sh && \
+    echo '  sleep 2' >> /app/test_entry.sh && \
+    echo 'done' >> /app/test_entry.sh && \
+    echo 'echo "Test environment:"' >> /app/test_entry.sh && \
+    echo 'env | grep -E "GUI_|DB_"' >> /app/test_entry.sh && \
+    echo 'echo "Running UI tests..."' >> /app/test_entry.sh && \
+    echo 'python -m pytest test_itu_minitwit_ui.py -v' >> /app/test_entry.sh && \
+    echo 'echo "Running refactored MiniTwit tests..."' >> /app/test_entry.sh && \
+    echo 'python -m pytest refactored_minitwit_tests.py -v' >> /app/test_entry.sh && \
+    chmod +x /app/test_entry.sh
+
+# Set headless mode for Firefox
+ENV MOZ_HEADLESS=1
+
+ENTRYPOINT ["/app/test_entry.sh"]
