@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+      - master
+      - fix-deployment
+      - staging
   workflow_dispatch: 
     
 jobs:
@@ -28,9 +31,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      - name: Find run_tests.sh script
-        id: find_test_script
+      - name: Find Docker directory and test script
+        id: find_paths
         run: |
+          # Find docker directory that contains Dockerfile.test
+          DOCKER_DIR=$(find . -name "Dockerfile.test" -type f | xargs dirname | head -n 1)
+          if [ -z "$DOCKER_DIR" ]; then
+            echo "Error: Dockerfile.test not found in the repository"
+            exit 1
+          fi
+          echo "DOCKER_DIR=${DOCKER_DIR}" >> $GITHUB_OUTPUT
+          echo "Found Docker directory at: ${DOCKER_DIR}"
+          
+          # Find run_tests.sh script
           SCRIPT_PATH=$(find . -name "run_tests.sh" -type f | head -n 1)
           if [ -z "$SCRIPT_PATH" ]; then
             echo "Error: run_tests.sh script not found in the repository"
@@ -41,8 +54,17 @@ jobs:
 
       - name: Run Test Suite
         run: |
-          cd $(dirname "${{ steps.find_test_script.outputs.SCRIPT_PATH }}")
+          # Copy the script to the Docker directory to ensure relative paths work
+          cp "${{ steps.find_paths.outputs.SCRIPT_PATH }}" "${{ steps.find_paths.outputs.DOCKER_DIR }}/run_tests.sh"
+          
+          # Change to the Docker directory
+          cd "${{ steps.find_paths.outputs.DOCKER_DIR }}"
           echo "Running tests from directory: $(pwd)"
+          
+          # List contents of the directory for debugging
+          ls -la
+          
+          # Make the script executable and run it
           sudo chmod +x ./run_tests.sh
           sudo ./run_tests.sh
         
