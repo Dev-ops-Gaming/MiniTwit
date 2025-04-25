@@ -6,7 +6,6 @@ on:
       - main
       - master
       - fix-deployment
-      - staging
   workflow_dispatch: 
     
 jobs:
@@ -24,6 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
       - name: Display repository structure
         run: |
           echo "Project structure:"
@@ -31,10 +35,38 @@ jobs:
           echo "Content of docker directory:"
           ls -la docker/
 
+      - name: Check Test Files
+        run: |
+          echo "Looking for Dockerfile.test..."
+          find . -name "Dockerfile.test"
+          
+          echo "Looking for docker-compose.test.yml..."
+          find . -name "docker-compose.test.yml"
+          
+          echo "Checking run_tests.sh content..."
+          cat run_tests.sh | head -n 50
+
+      - name: Modify run_tests.sh if necessary
+        run: |
+          # Update the script to use correct paths if needed
+          if grep -q "Dockerfile.test" run_tests.sh; then
+            if [ ! -f "Dockerfile.test" ] && [ -f "docker/Dockerfile.test" ]; then
+              echo "Updating Dockerfile.test path in script..."
+              sed -i 's|Dockerfile.test|docker/Dockerfile.test|g' run_tests.sh
+            fi
+          fi
+          
+          if grep -q "docker-compose.test.yml" run_tests.sh; then
+            if [ ! -f "docker-compose.test.yml" ] && [ -f "docker/docker-compose.test.yml" ]; then
+              echo "Updating docker-compose.test.yml path in script..."
+              sed -i 's|docker-compose.test.yml|docker/docker-compose.test.yml|g' run_tests.sh
+            fi
+          fi
+
       - name: Run Tests
         run: |
           chmod +x run_tests.sh
-          sudo ./run_tests.sh
+          sudo -E ./run_tests.sh
         
   build-and-deploy:
     runs-on: ubuntu-latest
