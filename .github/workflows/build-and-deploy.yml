@@ -29,45 +29,79 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      - name: Display repository structure
+      - name: Print repository structure and run_tests.sh content
         run: |
           echo "Project structure:"
-          ls -la
-          echo "Content of docker directory:"
-          ls -la docker/
-
-      - name: Check Test Files
-        run: |
-          echo "Looking for Dockerfile.test..."
-          find . -name "Dockerfile.test"
+          find . -type f -name "Dockerfile*" -o -name "docker-compose*" -o -name "run_tests.sh"
           
-          echo "Looking for docker-compose.test.yml..."
-          find . -name "docker-compose.test.yml"
-          
-          echo "Checking run_tests.sh content..."
-          cat run_tests.sh | head -n 50
+          echo "Content of run_tests.sh:"
+          cat run_tests.sh
 
-      - name: Modify run_tests.sh if necessary
+      - name: Create a custom test script
         run: |
-          # Update the script to use correct paths if needed
-          if grep -q "Dockerfile.test" run_tests.sh; then
-            if [ ! -f "Dockerfile.test" ] && [ -f "docker/Dockerfile.test" ]; then
-              echo "Updating Dockerfile.test path in script..."
-              sed -i 's|Dockerfile.test|docker/Dockerfile.test|g' run_tests.sh
-            fi
+          cat > run_minitwit_tests.sh << 'EOL'
+          #!/bin/bash
+
+          # Stop on first error
+          set -e
+
+          echo "Building and starting services..."
+
+          # Clean up any existing containers
+          echo "Cleaning up any existing containers..."
+          docker-compose -f docker/docker-compose.test.yml down -v || true
+
+          # Build the test container
+          echo "Building test container..."
+          docker build -t minitwit-uitests -f docker/Dockerfile.test .
+
+          # Build the minitwit app
+          echo "Building minitwit application..."
+          docker build -t minitwit-app -f docker/Dockerfile .
+
+          # Start PostgreSQL first
+          echo "Starting PostgreSQL database..."
+          docker-compose -f docker/docker-compose.test.yml up -d postgres
+          echo "Waiting for PostgreSQL to be healthy..."
+          sleep 15
+
+          # Start minitwit
+          echo "Starting MiniTwit application..."
+          docker-compose -f docker/docker-compose.test.yml up -d minitwit
+
+          # Wait for minitwit to become ready
+          echo "Waiting for MiniTwit to initialize..."
+          sleep 15
+
+          # Check if MiniTwit container is running
+          echo "Checking if MiniTwit container is running:"
+          if ! docker ps | grep -q minitwit-app; then
+              echo "ERROR: MiniTwit container is not running. Tests will not be executed."
+              docker logs minitwit-app
+              docker-compose -f docker/docker-compose.test.yml down -v
+              exit 1
           fi
-          
-          if grep -q "docker-compose.test.yml" run_tests.sh; then
-            if [ ! -f "docker-compose.test.yml" ] && [ -f "docker/docker-compose.test.yml" ]; then
-              echo "Updating docker-compose.test.yml path in script..."
-              sed -i 's|docker-compose.test.yml|docker/docker-compose.test.yml|g' run_tests.sh
-            fi
-          fi
 
-      - name: Run Tests
+          # Run tests
+          echo "Running UI and API tests..."
+          docker-compose -f docker/docker-compose.test.yml up --abort-on-container-exit uitests
+
+          # Get the exit code of the test container
+          TEST_EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' minitwit-uitests || echo "1")
+
+          # Cleanup
+          echo "Cleaning up containers and volumes..."
+          docker-compose -f docker/docker-compose.test.yml down -v
+
+          echo "Tests completed with exit code: $TEST_EXIT_CODE"
+          exit $TEST_EXIT_CODE
+          EOL
+          
+          chmod +x run_minitwit_tests.sh
+
+      - name: Run Tests with Custom Script
         run: |
-          chmod +x run_tests.sh
-          sudo -E ./run_tests.sh
+          sudo -E ./run_minitwit_tests.sh
         
   build-and-deploy:
     runs-on: ubuntu-latest
