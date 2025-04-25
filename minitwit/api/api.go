@@ -21,16 +21,6 @@ import (
 	"gorm.io/gorm"
 )
 
-func afterReq(database *gorm.DB) {
-	//Closes the database again at the end of the request.
-	rawDB, err := database.DB()
-	if err != nil {
-		fmt.Println("Error getting *sql.DB object:", err)
-		return
-	}
-	rawDB.Close()
-}
-
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -135,7 +125,6 @@ func register(database *gorm.DB) http.HandlerFunc {
 			respondWithError(w, http.StatusBadRequest, erro)
 		} else {
 			w.WriteHeader(http.StatusCreated) // return 201
-			afterReq(database)
 		}
 	}
 }
@@ -175,7 +164,6 @@ func messages(database *gorm.DB) http.HandlerFunc {
 			}
 			respondWithSuccess(w, http.StatusOK, filtered_msgs)
 		}
-		afterReq(database)
 	}
 }
 
@@ -240,7 +228,6 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 			}
 			w.WriteHeader(204)
 		}
-		afterReq(database)
 	}
 }
 
@@ -314,7 +301,6 @@ func follow(database *gorm.DB) http.HandlerFunc {
 			followers_response := map[string]any{"follows": follower_names}
 			respondWithSuccess(w, http.StatusOK, followers_response)
 		}
-		afterReq(database)
 	}
 }
 
