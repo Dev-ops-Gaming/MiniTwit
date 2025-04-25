@@ -2,18 +2,22 @@ package handlers
 
 import (
 	"crypto/md5"
-	"database/sql"
 	"encoding/hex"
+	"log"
 	"net/http"
+	"strings"
 	"text/template"
 
+	"minitwit/db"
 	"minitwit/models"
 	"minitwit/utils"
+
+	"gorm.io/gorm"
 )
 
 var registerTmpl = template.Must(template.ParseFiles("templates/layout.html", "templates/register.html"))
 
-func RegisterHandler(database *sql.DB) http.HandlerFunc {
+func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			if err := registerTmpl.Execute(w, nil); err != nil {
@@ -29,17 +33,25 @@ func RegisterHandler(database *sql.DB) http.HandlerFunc {
 			// input validation
 			if username == "" || email == "" || password == "" {
 				http.Error(w, "You must fill out all fields", http.StatusBadRequest)
+				return
 			}
 
 			// Check if repeated password matches
 			if password != password2 {
 				http.Error(w, "Passwords do not match", http.StatusBadRequest)
+				return
 			}
 
-			//check if user already exists
-			_, err := models.GetUserByUsername(database, username)
+			// Validate email format
+			if !isValidEmail(email) {
+				http.Error(w, "You have to enter a valid email address", http.StatusBadRequest)
+				return
+			}
+
+			_, err := db.GormGetUserId(database, username)
 			if err == nil {
 				http.Error(w, "User already exists", http.StatusBadRequest)
+				return
 			}
 
 			// hash the password
@@ -48,11 +60,28 @@ func RegisterHandler(database *sql.DB) http.HandlerFunc {
 			pwHash := hex.EncodeToString(hash.Sum(nil))
 
 			// insert the user into the database
-			_, err = database.Exec("INSERT INTO user (username, email, pw_hash) VALUES (?, ?, ?)", username, email, pwHash)
+			user := models.User{Username: username, Email: email, PwHash: pwHash}
+			result := database.Create(&user)
+			if result.Error != nil {
+				log.Fatalf("Failed to insert in db: %v", err)
+				return
+			}
 
 			// redirect to timeline
 			utils.AddFlash(w, r, "You were successfully registered and can login now")
 			http.Redirect(w, r, "/login", http.StatusFound)
 		}
 	}
+}
+
+// isValidEmail validates the email format
+func isValidEmail(email string) bool {
+	// Simple email validation - check for @ symbol and a period after it
+	atIndex := strings.Index(email, "@")
+	if atIndex < 1 {
+		return false
+	}
+	
+	dotIndex := strings.LastIndex(email, ".")
+	return dotIndex > atIndex && dotIndex < len(email)-1
 }

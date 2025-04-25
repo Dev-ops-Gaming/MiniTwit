@@ -1,0 +1,28 @@
+    name: Use Hadolint on dockerfiles
+    
+    #on:
+    #  push:
+    #    branches:
+    #      - staging
+    #  workflow_dispatch: 
+
+    # To make workflow reusable
+    on:
+      workflow_call:
+        
+    jobs:
+      hadolint:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v2
+
+          - name: Hadolint Action app
+            uses: hadolint/hadolint-action@v3.1.0
+            with: 
+              dockerfile: docker/Dockerfile
+
+          - name: Hadolint Action api
+            uses: hadolint/hadolint-action@v3.1.0
+            with: 
+              dockerfile: docker/Dockerfile.api

@@ -1,0 +1,103 @@
+services:
+
+#running with current scaling setup resulted in 18 db connections (seen on digitalocean)
+  app:
+    build:
+          context: ../
+          dockerfile: docker/Dockerfile
+    image: pbjh/minitwit-app:latest
+    deploy:
+      replicas: 3 #lets start with 3, see if we need more
+      placement:
+        constraints: [node.role != manager] #dont run services on manager-node
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 30s
+      rollback_config:
+        parallelism: 1 
+        delay: 5s 
+        order: stop-first 
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_DBNAME=${DB_DBNAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_TIMEZONE=${DB_TIMEZONE}
+    networks:
+      - minitwit-network
+
+  api:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.api
+    image: pbjh/minitwit-api:latest
+    deploy:
+      replicas: 4
+      placement:
+        constraints: [node.role != manager]
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 30s
+      rollback_config:
+        parallelism: 1 
+        delay: 5s 
+        order: stop-first
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_DBNAME=${DB_DBNAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_TIMEZONE=${DB_TIMEZONE}
+    networks:
+      - minitwit-network
+  prometheus:
+    image: prom/prometheus
+    deploy:
+      mode: global # run on all nodes
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    environment:
+      - LOG_LEVEL=warn
+    networks:
+      - minitwit-network
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_LOG_LEVEL=warn
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - minitwit-network
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == main # only host grafana on main node
+
+
+networks:
+  minitwit-network:
+    driver: overlay
+
+volumes:
+  grafana-storage:

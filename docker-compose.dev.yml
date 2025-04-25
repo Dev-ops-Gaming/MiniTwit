@@ -1,0 +1,87 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=testpassword
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DBNAME=testdb
+      - DB_SSLMODE=disable
+      - DB_TIMEZONE=Europe/Copenhagen
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - minitwit-network
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=testpassword
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DBNAME=testdb
+      - DB_SSLMODE=disable
+      - DB_TIMEZONE=Europe/Copenhagen
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - minitwit-network
+
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "testpassword"
+      POSTGRES_DB: "testdb"
+    volumes:
+      - local_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - minitwit-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - local_prometheus-storage:/var/lib/prometheus
+    networks:
+      - minitwit-network
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - local_grafana-storage:/var/lib/grafana
+    networks:
+      - minitwit-network
+
+networks:
+  minitwit-network:
+    driver: bridge
+
+
+volumes:
+  local_pgdata:
+  local_grafana-storage:
+  local_prometheus-storage:

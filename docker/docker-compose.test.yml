@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database - matched to your real configuration
+  postgres:
+    image: postgres:latest
+    container_name: minitwit-postgres
+    volumes:
+      - minitwit-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - minitwit-network
+
+  # MiniTwit application
+  minitwit:
+    image: minitwit-app
+    container_name: minitwit-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Environment variables matched to your real configuration
+      - DB_HOST=postgres
+      - DB_USER=myuser
+      - DB_PASSWORD=mypassword
+      - DB_DBNAME=postgres
+      - DB_PORT=5432
+      - DB_SSLMODE=disable
+      - DB_TIMEZONE=Europe/Copenhagen
+      # Explicitly provide the connection string for GORM
+      - POSTGRES_CONNECTION=host=postgres user=myuser password=mypassword dbname=postgres port=5432 sslmode=disable TimeZone=Europe/Copenhagen
+    networks:
+      minitwit-network:
+        aliases:
+          - minitwit
+    hostname: minitwit
+    restart: on-failure
+
+  # UI Tests
+  uitests:
+    image: minitwit-uitests
+    container_name: minitwit-uitests
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - GUI_HOST=minitwit
+      - GUI_PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=myuser
+      - DB_PASSWORD=mypassword
+      - DB_NAME=postgres
+      - STARTUP_DELAY=30
+      - MAX_RETRIES=30
+      - RETRY_DELAY=2
+    entrypoint: ["/app/test_entry.sh"]
+    links:
+      - minitwit
+      - postgres
+    networks:
+      - minitwit-network
+    extra_hosts:
+      - "minitwit:host-gateway"
+
+volumes:
+  minitwit-data:
+
+networks:
+  minitwit-network:
+    driver: bridge

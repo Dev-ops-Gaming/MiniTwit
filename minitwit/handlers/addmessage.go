@@ -1,16 +1,18 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 
+	"minitwit/models"
 	"minitwit/utils"
+
+	"gorm.io/gorm"
 )
 
-func AddMessageHandler(database *sql.DB) http.HandlerFunc {
+func AddMessageHandler(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		store, _ := utils.GetSession(r)
+		store, _ := utils.GetSession(r, w)
 		if store.Values["user_id"] == nil {
 			http.Error(w, "You are not logged in", http.StatusBadRequest)
 			return
@@ -20,9 +22,15 @@ func AddMessageHandler(database *sql.DB) http.HandlerFunc {
 		text := r.FormValue("text")
 		userID := store.Values["user_id"].(int)
 
+		if text == "" {
+			http.Error(w, "Your message cannot be empty", http.StatusBadRequest)
+			return
+		}
+
 		// Insert message into the database
-		_, err := database.Exec("INSERT INTO message (author_id, text, pub_date, flagged) VALUES (?, ?, ?, 0)", userID, text, time.Now().Unix())
-		if err != nil {
+		message := models.Message{Author_id: uint(userID), Text: text, Pub_date: time.Now().Unix(), Flagged: 0}
+		result := database.Create(&message)
+		if result.Error != nil {
 			http.Error(w, "Failed to insert message", http.StatusInternalServerError)
 			return
 		}

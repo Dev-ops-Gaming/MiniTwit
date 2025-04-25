@@ -1,0 +1,57 @@
+    name: Run golangci-lint tool
+
+    #on:
+    #  push:
+    #    branches:
+    #      - staging
+    #  workflow_dispatch:
+
+    # To make workflow reusable
+    on:
+      workflow_call:
+
+    env:
+      GO_VERSION: stable
+      GOLANGCI_LINT_VERSION: v1.64
+
+    jobs:
+      detect-modules:
+        runs-on: ubuntu-latest
+        outputs:
+          modules: ${{ steps.set-modules.outputs.modules }}
+        steps:
+          - uses: actions/checkout@v4
+          - uses: actions/setup-go@v5
+            with:
+              go-version: ${{ env.GO_VERSION }}
+          - id: set-modules
+            working-directory: ./minitwit
+            run: echo "modules=$(go list -m -json | jq -s '.' | jq -c '[.[].Dir]')" >> $GITHUB_OUTPUT
+
+      format-go-files:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4
+          # Format code using gofmt
+          # This will find all .go files in 'minitwit' and subdirectories
+        - name: Check code formatting using gofmt
+          uses: Jerome1337/gofmt-action@v1.0.5
+          with: 
+            gofmt-path: './minitwit'
+
+      golangci-lint:
+        needs: detect-modules
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            modules: ${{ fromJSON(needs.detect-modules.outputs.modules) }}
+        steps:
+          - uses: actions/checkout@v4
+          - uses: actions/setup-go@v5
+            with:
+              go-version: ${{ env.GO_VERSION }}
+          - name: golangci-lint ${{ matrix.modules }}
+            uses: golangci/golangci-lint-action@v6
+            with:
+              version: ${{ env.GOLANGCI_LINT_VERSION }}
+              working-directory: ${{ matrix.modules }}
