@@ -24,84 +24,61 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Set up Docker Compose
+      - name: Set up environment
         run: |
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      - name: Print repository structure and run_tests.sh content
+      - name: Run manual test steps directly
         run: |
-          echo "Project structure:"
-          find . -type f -name "Dockerfile*" -o -name "docker-compose*" -o -name "run_tests.sh"
+          # Display repository structure to see what we're working with
+          echo "Repository structure:"
+          find . -name "Dockerfile*"
+          find . -name "docker-compose*"
           
-          echo "Content of run_tests.sh:"
-          cat run_tests.sh
-
-      - name: Create a custom test script
-        run: |
-          cat > run_minitwit_tests.sh << 'EOL'
-          #!/bin/bash
-
-          # Stop on first error
-          set -e
-
-          echo "Building and starting services..."
-
-          # Clean up any existing containers
-          echo "Cleaning up any existing containers..."
-          docker-compose -f docker/docker-compose.test.yml down -v || true
-
-          # Build the test container
-          echo "Building test container..."
-          docker build -t minitwit-uitests -f docker/Dockerfile.test .
-
-          # Build the minitwit app
-          echo "Building minitwit application..."
-          docker build -t minitwit-app -f docker/Dockerfile .
-
-          # Start PostgreSQL first
-          echo "Starting PostgreSQL database..."
+          # Setup test database
+          echo "Setting up test database"
           docker-compose -f docker/docker-compose.test.yml up -d postgres
-          echo "Waiting for PostgreSQL to be healthy..."
-          sleep 15
-
-          # Start minitwit
-          echo "Starting MiniTwit application..."
+          sleep 15 # Wait for database to be ready
+          
+          # Build and run the application
+          echo "Building application"
+          docker build -t minitwit-app -f docker/Dockerfile .
           docker-compose -f docker/docker-compose.test.yml up -d minitwit
-
-          # Wait for minitwit to become ready
-          echo "Waiting for MiniTwit to initialize..."
-          sleep 15
-
-          # Check if MiniTwit container is running
-          echo "Checking if MiniTwit container is running:"
-          if ! docker ps | grep -q minitwit-app; then
-              echo "ERROR: MiniTwit container is not running. Tests will not be executed."
-              docker logs minitwit-app
-              docker-compose -f docker/docker-compose.test.yml down -v
+          sleep 15 # Wait for application to start
+          
+          # Build and run the tests
+          echo "Building and running tests"
+          if [ -f "docker/Dockerfile.test" ]; then
+            echo "Found Dockerfile.test in docker/"
+            docker build -t minitwit-uitests -f docker/Dockerfile.test .
+          elif [ -f "Dockerfile.test" ]; then
+            echo "Found Dockerfile.test in root"
+            docker build -t minitwit-uitests -f Dockerfile.test .
+          else
+            # Search for the file
+            TEST_DOCKERFILE=$(find . -name "Dockerfile.test" | head -n 1)
+            if [ -n "$TEST_DOCKERFILE" ]; then
+              echo "Found Dockerfile.test at $TEST_DOCKERFILE"
+              docker build -t minitwit-uitests -f "$TEST_DOCKERFILE" .
+            else
+              echo "ERROR: Cannot find Dockerfile.test anywhere in the repository"
               exit 1
+            fi
           fi
-
-          # Run tests
-          echo "Running UI and API tests..."
+          
+          # Run the tests with abort on container exit
           docker-compose -f docker/docker-compose.test.yml up --abort-on-container-exit uitests
-
-          # Get the exit code of the test container
+          
+          # Check the test result
           TEST_EXIT_CODE=$(docker inspect -f '{{.State.ExitCode}}' minitwit-uitests || echo "1")
-
+          
           # Cleanup
-          echo "Cleaning up containers and volumes..."
           docker-compose -f docker/docker-compose.test.yml down -v
-
+          
+          # Exit with test result
           echo "Tests completed with exit code: $TEST_EXIT_CODE"
           exit $TEST_EXIT_CODE
-          EOL
-          
-          chmod +x run_minitwit_tests.sh
-
-      - name: Run Tests with Custom Script
-        run: |
-          sudo -E ./run_minitwit_tests.sh
         
   build-and-deploy:
     runs-on: ubuntu-latest
