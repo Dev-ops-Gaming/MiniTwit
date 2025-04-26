@@ -17,6 +17,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testEmail    = "test@example.com"
+	testUsername = "testuser"
+	testPassword = "password"
+)
+
 // Create form request helper
 func createFormRequest(method, path string, formValues map[string]string) *http.Request {
 	form := url.Values{}
@@ -62,9 +68,9 @@ func TestRegisterHandlerValidationErrors(t *testing.T) {
 	t.Run("EmptyFields", func(t *testing.T) {
 		formValues := map[string]string{
 			"username":  "",
-			"email":     "test@example.com",
-			"password":  "password",
-			"password2": "password",
+			"email":     testEmail,
+			"password":  testPassword,
+			"password2": testPassword,
 		}
 		req := createFormRequest("POST", "/register", formValues)
 		rec := httptest.NewRecorder()
@@ -77,10 +83,10 @@ func TestRegisterHandlerValidationErrors(t *testing.T) {
 	// Test password mismatch
 	t.Run("PasswordMismatch", func(t *testing.T) {
 		formValues := map[string]string{
-			"username":  "testuser",
-			"email":     "test@example.com",
-			"password":  "password1",
-			"password2": "password2",
+			"username":  testUsername,
+			"email":     testEmail,
+			"password":  testPassword,
+			"password2": testPassword,
 		}
 		req := createFormRequest("POST", "/register", formValues)
 		rec := httptest.NewRecorder()
@@ -93,10 +99,10 @@ func TestRegisterHandlerValidationErrors(t *testing.T) {
 	// Test invalid email
 	t.Run("InvalidEmail", func(t *testing.T) {
 		formValues := map[string]string{
-			"username":  "testuser",
+			"username":  testUsername,
 			"email":     "invalid-email", // Not a valid email
-			"password":  "password",
-			"password2": "password",
+			"password":  testPassword,
+			"password2": testPassword,
 		}
 		req := createFormRequest("POST", "/register", formValues)
 		rec := httptest.NewRecorder()
@@ -148,15 +154,15 @@ func TestModels(t *testing.T) {
 	t.Run("UserModel", func(t *testing.T) {
 		user := models.User{
 			User_id:  123,
-			Username: "testuser",
-			Email:    "test@example.com",
+			Username: testUsername,
+			Email:    testEmail,
 			PwHash:   "hashedpassword",
 			Pwd:      "password",
 		}
 
 		assert.Equal(t, 123, user.User_id)
-		assert.Equal(t, "testuser", user.Username)
-		assert.Equal(t, "test@example.com", user.Email)
+		assert.Equal(t, testUsername, user.Username)
+		assert.Equal(t, testEmail, user.Email)
 		assert.Equal(t, "hashedpassword", user.PwHash)
 		assert.Equal(t, "password", user.Pwd)
 	})
@@ -166,8 +172,8 @@ func TestModels(t *testing.T) {
 		message := models.Message{
 			Message_id: 1,
 			Author_id:  123,
-			Author:     "testuser",
-			Email:      "test@example.com",
+			Author:     testUsername,
+			Email:      testEmail,
 			Text:       "Test message",
 			Pub_date:   123456789,
 			PubDate:    "2023-10-12 15:30",
@@ -176,8 +182,8 @@ func TestModels(t *testing.T) {
 
 		assert.Equal(t, 1, message.Message_id)
 		assert.Equal(t, uint(123), message.Author_id)
-		assert.Equal(t, "testuser", message.Author)
-		assert.Equal(t, "test@example.com", message.Email)
+		assert.Equal(t, testUsername, message.Author)
+		assert.Equal(t, testEmail, message.Email)
 		assert.Equal(t, "Test message", message.Text)
 		assert.Equal(t, int64(123456789), message.Pub_date)
 		assert.Equal(t, "2023-10-12 15:30", message.PubDate)
