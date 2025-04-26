@@ -45,7 +45,7 @@ func TestLogoutHandler(t *testing.T) {
 }
 
 // Test AddMessageHandler when not logged in
-func TestAddMessageHandler_NotLoggedIn(t *testing.T) {
+func TestAddMessageHandlerNotLoggedIn(t *testing.T) {
 	formValues := map[string]string{
 		"text": "Test message",
 	}
@@ -58,7 +58,7 @@ func TestAddMessageHandler_NotLoggedIn(t *testing.T) {
 }
 
 // Test RegisterHandler with validation errors
-func TestRegisterHandler_ValidationErrors(t *testing.T) {
+func TestRegisterHandlerValidationErrors(t *testing.T) {
 	t.Run("EmptyFields", func(t *testing.T) {
 		formValues := map[string]string{
 			"username":  "",
@@ -108,7 +108,7 @@ func TestRegisterHandler_ValidationErrors(t *testing.T) {
 }
 
 // Test FollowHandler when not logged in
-func TestFollowHandler_NotLoggedIn(t *testing.T) {
+func TestFollowHandlerNotLoggedIn(t *testing.T) {
 	req := httptest.NewRequest("GET", "/user/follow", nil)
 	req = addRouteParams(req, map[string]string{"username": "user"})
 	rec := httptest.NewRecorder()
@@ -120,7 +120,7 @@ func TestFollowHandler_NotLoggedIn(t *testing.T) {
 }
 
 // Test UnfollowHandler when not logged in
-func TestUnfollowHandler_NotLoggedIn(t *testing.T) {
+func TestUnfollowHandlerNotLoggedIn(t *testing.T) {
 	req := httptest.NewRequest("GET", "/user/unfollow", nil)
 	req = addRouteParams(req, map[string]string{"username": "user"})
 	rec := httptest.NewRecorder()
@@ -132,7 +132,7 @@ func TestUnfollowHandler_NotLoggedIn(t *testing.T) {
 }
 
 // Test TimelineHandler for user not logged in
-func TestTimelineHandler_NotLoggedIn(t *testing.T) {
+func TestTimelineHandlerNotLoggedIn(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	rec := httptest.NewRecorder()
 
