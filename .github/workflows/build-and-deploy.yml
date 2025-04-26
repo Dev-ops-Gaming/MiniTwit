@@ -6,7 +6,6 @@ on:
       - main
       - master
       - fix-deployment
-      - staging
   workflow_dispatch: 
     
 jobs:
