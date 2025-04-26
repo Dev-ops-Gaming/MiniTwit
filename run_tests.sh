@@ -24,6 +24,36 @@ if [ ! -f test_requirements.txt ]; then
     echo "requests==2.31.0" >> test_requirements.txt
 fi
 
+# Run the Go unit tests first
+echo "=== Running Go unit tests ==="
+echo "Running handlers_test.go..."
+cd ./minitwit_test
+go test -v handlers_test.go
+HANDLERS_TEST_EXIT=$?
+
+echo "Running models_test.go..."
+go test -v models_test.go
+MODELS_TEST_EXIT=$?
+
+echo "Running db_test.go..."
+go test -v db_test.go
+DB_TEST_EXIT=$?
+cd ..
+
+# Check if any Go tests failed
+if [ $HANDLERS_TEST_EXIT -ne 0 ] || [ $MODELS_TEST_EXIT -ne 0 ] || [ $DB_TEST_EXIT -ne 0 ]; then
+    echo "One or more Go unit tests failed."
+    echo "handlers_test exit code: $HANDLERS_TEST_EXIT"
+    echo "models_test exit code: $MODELS_TEST_EXIT"
+    echo "db_test exit code: $DB_TEST_EXIT"
+    
+    # Uncomment the following line if you want to stop on Go test failure
+    # exit 1
+else
+    echo "All Go unit tests passed successfully."
+fi
+
+echo "=== Setting up integration test environment ==="
 echo "Building and starting services..."
 
 # First, make sure to clean up any existing containers
@@ -73,4 +103,12 @@ echo "Cleaning up containers and volumes..."
 $USE_SUDO docker-compose -f docker/docker-compose.test.yml down -v
 
 echo "Tests completed with exit code: $TEST_EXIT_CODE"
-exit $TEST_EXIT_CODE
+
+# Calculate final exit code based on all test results
+FINAL_EXIT_CODE=0
+if [ $HANDLERS_TEST_EXIT -ne 0 ] || [ $MODELS_TEST_EXIT -ne 0 ] || [ $DB_TEST_EXIT -ne 0 ] || [ $TEST_EXIT_CODE -ne 0 ]; then
+    FINAL_EXIT_CODE=1
+fi
+
+echo "All tests completed with final exit code: $FINAL_EXIT_CODE"
+exit $FINAL_EXIT_CODE
