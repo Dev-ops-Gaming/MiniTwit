@@ -86,7 +86,7 @@ func TestRegisterHandlerValidationErrors(t *testing.T) {
 			"username":  testUsername,
 			"email":     testEmail,
 			"password":  testPassword,
-			"password2": testPassword,
+			"password2": testPassword + "different",
 		}
 		req := createFormRequest("POST", "/register", formValues)
 		rec := httptest.NewRecorder()
