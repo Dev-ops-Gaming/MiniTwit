@@ -113,25 +113,23 @@ else
 fi
 cd ..
 
-# Make sure we print the summary
-{
-    echo ""
-    echo "===== TEST SUMMARY ====="
-    echo "Integration tests: $([ "$TEST_EXIT_CODE" -eq 0 ] && echo "PASSED" || echo "FAILED")"
-    echo "Go unit tests: $PASSED_TESTS passed, $FAILED_TESTS failed out of $TOTAL_TESTS"
+# Make sure we print the summary without trying to use /dev/tty
+echo ""
+echo "===== TEST SUMMARY ====="
+echo "Integration tests: $([ "$TEST_EXIT_CODE" -eq 0 ] && echo "PASSED" || echo "FAILED")"
+echo "Go unit tests: $PASSED_TESTS passed, $FAILED_TESTS failed out of $TOTAL_TESTS"
 
-    if [ "$FAILED_TESTS" -gt 0 ]; then
-        echo "Failed tests:$FAILED_TEST_NAMES"
-    fi
+if [ "$FAILED_TESTS" -gt 0 ]; then
+    echo "Failed tests:$FAILED_TEST_NAMES"
+fi
 
-    # Calculate final exit code
-    FINAL_EXIT_CODE=0
-    if [ "$TEST_EXIT_CODE" -ne 0 ] || [ "$FAILED_TESTS" -gt 0 ]; then
-        FINAL_EXIT_CODE=1
-    fi
+# Calculate final exit code
+FINAL_EXIT_CODE=0
+if [ "$TEST_EXIT_CODE" -ne 0 ] || [ "$FAILED_TESTS" -gt 0 ]; then
+    FINAL_EXIT_CODE=1
+fi
 
-    echo "===== END TEST SUMMARY ====="
-    echo "Tests completed with final exit code: $FINAL_EXIT_CODE"
-} | tee /dev/tty
+echo "===== END TEST SUMMARY ====="
+echo "Tests completed with final exit code: $FINAL_EXIT_CODE"
 
 exit $FINAL_EXIT_CODE
