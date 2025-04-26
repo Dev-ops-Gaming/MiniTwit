@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Stop on first error
-set -e
+# Don't halt on errors for the entire script
+set +e
 
 # Check if we need sudo
 if docker info > /dev/null 2>&1; then
@@ -61,7 +61,7 @@ if ! $USE_SUDO docker ps | grep -q minitwit-app; then
     exit 1
 fi
 
-# Run tests
+# Run integration tests
 echo "Running UI and API tests..."
 $USE_SUDO docker-compose -f docker/docker-compose.test.yml up --abort-on-container-exit uitests
 
@@ -72,5 +72,66 @@ TEST_EXIT_CODE=$($USE_SUDO docker inspect -f '{{.State.ExitCode}}' minitwit-uite
 echo "Cleaning up containers and volumes..."
 $USE_SUDO docker-compose -f docker/docker-compose.test.yml down -v
 
-echo "Tests completed with exit code: $TEST_EXIT_CODE"
-exit $TEST_EXIT_CODE
+# Now run the Go unit tests
+echo "Running Go unit tests..."
+
+# Initialize counters
+TOTAL_TESTS=3
+PASSED_TESTS=0
+FAILED_TESTS=0
+FAILED_TEST_NAMES=""
+
+# Test handlers
+echo "Running handlers_test.go..."
+cd ./minitwit_test
+go test -v handlers_test.go
+if [ $? -eq 0 ]; then
+    PASSED_TESTS=$((PASSED_TESTS+1))
+else
+    FAILED_TESTS=$((FAILED_TESTS+1))
+    FAILED_TEST_NAMES="$FAILED_TEST_NAMES handlers_test"
+fi
+
+# Test models
+echo "Running models_test.go..."
+go test -v models_test.go
+if [ $? -eq 0 ]; then
+    PASSED_TESTS=$((PASSED_TESTS+1))
+else
+    FAILED_TESTS=$((FAILED_TESTS+1))
+    FAILED_TEST_NAMES="$FAILED_TEST_NAMES models_test"
+fi
+
+# Test DB
+echo "Running db_test.go..."
+go test -v db_test.go
+if [ $? -eq 0 ]; then
+    PASSED_TESTS=$((PASSED_TESTS+1))
+else
+    FAILED_TESTS=$((FAILED_TESTS+1))
+    FAILED_TEST_NAMES="$FAILED_TEST_NAMES db_test"
+fi
+cd ..
+
+# Make sure we print the summary
+{
+    echo ""
+    echo "===== TEST SUMMARY ====="
+    echo "Integration tests: $([ "$TEST_EXIT_CODE" -eq 0 ] && echo "PASSED" || echo "FAILED")"
+    echo "Go unit tests: $PASSED_TESTS passed, $FAILED_TESTS failed out of $TOTAL_TESTS"
+
+    if [ "$FAILED_TESTS" -gt 0 ]; then
+        echo "Failed tests:$FAILED_TEST_NAMES"
+    fi
+
+    # Calculate final exit code
+    FINAL_EXIT_CODE=0
+    if [ "$TEST_EXIT_CODE" -ne 0 ] || [ "$FAILED_TESTS" -gt 0 ]; then
+        FINAL_EXIT_CODE=1
+    fi
+
+    echo "===== END TEST SUMMARY ====="
+    echo "Tests completed with final exit code: $FINAL_EXIT_CODE"
+} | tee /dev/tty
+
+exit $FINAL_EXIT_CODE
