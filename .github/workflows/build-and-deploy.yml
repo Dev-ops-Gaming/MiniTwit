@@ -6,7 +6,6 @@ on:
       - main
       - master
       - fix-deployment
-      - Unit-test
   workflow_dispatch: 
     
 jobs:
