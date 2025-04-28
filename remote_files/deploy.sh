@@ -7,8 +7,9 @@ cd /minitwit
 echo "Pulling latest images..."
 docker-compose pull
 
-echo "Restarting services..."
-docker-compose up -d
+# Deploy to Docker Swarm using stack deploy
+echo "Deploying stack to Docker Swarm..."
+docker stack deploy -c docker-compose.yml minitwit
 
-echo "Current running containers:"
-docker ps
+echo "Current running services in Swarm:"
+docker service ls
