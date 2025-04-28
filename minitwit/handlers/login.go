@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func login_page_get(w http.ResponseWriter, r *http.Request, store *sessions.Session) {
+func loginPageGet(w http.ResponseWriter, r *http.Request, store *sessions.Session) {
 	if store.Values["user_id"] != nil {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
@@ -25,7 +25,7 @@ func login_page_get(w http.ResponseWriter, r *http.Request, store *sessions.Sess
 	//return
 }
 
-func login_user(w http.ResponseWriter, r *http.Request, store *sessions.Session, database *gorm.DB) {
+func loginUser(w http.ResponseWriter, r *http.Request, store *sessions.Session, database *gorm.DB) {
 	// Get input from form
 	username := r.FormValue("username")
 	password := r.FormValue("password")
@@ -66,11 +66,11 @@ func LoginHandler(database *gorm.DB) http.HandlerFunc {
 		store, _ := utils.GetSession(r, w)
 
 		if r.Method == "GET" {
-			login_page_get(w, r, store)
+			loginPageGet(w, r, store)
 		}
 
 		if r.Method == "POST" {
-			login_user(w, r, store, database)
+			loginUser(w, r, store, database)
 		}
 	}
 }

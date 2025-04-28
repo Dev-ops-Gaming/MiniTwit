@@ -17,7 +17,7 @@ import (
 
 var registerTmpl = template.Must(template.ParseFiles("templates/layout.html", "templates/register.html"))
 
-func register_user(w http.ResponseWriter, r *http.Request, database *gorm.DB) {
+func registerUser(w http.ResponseWriter, r *http.Request, database *gorm.DB) {
 	username := r.FormValue("username")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
@@ -73,7 +73,7 @@ func RegisterHandler(database *gorm.DB) http.HandlerFunc {
 			}
 		}
 		if r.Method == "POST" {
-			register_user(w, r, database)
+			registerUser(w, r, database)
 		}
 	}
 }
