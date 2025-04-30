@@ -94,6 +94,18 @@ services:
         constraints:
           - node.hostname == main # only host grafana on main node
 
+  dozzle:
+    image: amir20/dozzle:latest
+    environment:
+      - DOZZLE_MODE=swarm
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8088:8080 # dozzle is running on port 8080 -> expose it on 8088
+    networks:
+      - minitwit-network
+    deploy:
+      mode: global
 
 networks:
   minitwit-network:
