@@ -21,6 +21,10 @@ import (
 	"gorm.io/gorm"
 )
 
+var noUserFoundError = "User not found."
+var DecodeError = "Failed to decode request body."
+var dbInsertError = "Failed to insert in database."
+
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -40,8 +44,8 @@ func respondWithSuccess(w http.ResponseWriter, code int, payload any) {
 }
 
 func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
-	from_simulator := r.Header.Get("Authorization")
-	if from_simulator != "Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh" {
+	fromSimulator := r.Header.Get("Authorization")
+	if fromSimulator != "Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh" {
 		respondWithError(w, http.StatusForbidden, "You are not authorized to access this resource!")
 		return true
 	}
@@ -50,8 +54,8 @@ func notReqFromSimulator(w http.ResponseWriter, r *http.Request) bool {
 
 func updateLatest(r *http.Request) {
 	// Get arg value associated with 'latest' & convert to int
-	parsed_command_id := r.FormValue("latest")
-	if parsed_command_id != "-1" && parsed_command_id != "" {
+	parsedCommandId := r.FormValue("latest")
+	if parsedCommandId != "-1" && parsedCommandId != "" {
 		//f, err := os.OpenFile("./latest_processed_sim_action_id.txt", os.O_WRONLY, os.)//, os.ModeAppend)
 		f, err := os.Create("./latest_processed_sim_action_id.txt")
 		if err != nil {
@@ -59,7 +63,7 @@ func updateLatest(r *http.Request) {
 		}
 
 		//this returns an int as well, but not sure what its used to signal lol
-		_, err = f.WriteString(parsed_command_id)
+		_, err = f.WriteString(parsedCommandId)
 		if err != nil {
 			log.Fatalf("Failed to convert write id to file: %v", err)
 		}
@@ -84,6 +88,21 @@ func getLatest(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusOK, map[string]int{"latest": latestInt})
 }
 
+func checkRegisterUserInput(t models.User, database *gorm.DB) string {
+	var erro string = ""
+	if t.Username == "" {
+		erro = "You have to enter a username"
+	} else if t.Email == "" || !strings.ContainsAny(t.Email, "@") {
+		erro = "You have to enter a valid email address"
+	} else if t.Pwd == "" {
+		erro = "You have to enter a password"
+	} else if _, err := db.GormGetUserId(database, t.Username); err == nil {
+		erro = "The username is already taken"
+	}
+
+	return erro
+}
+
 func register(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		updateLatest(r)
@@ -92,21 +111,15 @@ func register(database *gorm.DB) http.HandlerFunc {
 		d := json.NewDecoder(r.Body)
 		var t models.User
 		if err := d.Decode(&t); err != nil {
-			respondWithError(w, http.StatusBadRequest, "Failed to decode request body.")
+			respondWithError(w, http.StatusBadRequest, DecodeError)
 			return
 		}
 
 		var erro string = ""
 		if r.Method == "POST" {
-			if t.Username == "" {
-				erro = "You have to enter a username"
-			} else if t.Email == "" || !strings.ContainsAny(t.Email, "@") {
-				erro = "You have to enter a valid email address"
-			} else if t.Pwd == "" {
-				erro = "You have to enter a password"
-			} else if _, err := db.GormGetUserId(database, t.Username); err == nil {
-				erro = "The username is already taken"
-			} else {
+			erro = checkRegisterUserInput(t, database)
+			//If input ok, register user in db
+			if erro == "" {
 				// hash the password
 				hash := md5.New()
 				hash.Write([]byte(r.Form.Get("pwd")))
@@ -115,7 +128,7 @@ func register(database *gorm.DB) http.HandlerFunc {
 				user := models.User{Username: t.Username, Email: t.Email, PwHash: pwHash}
 				result := database.Create(&user)
 				if result.Error != nil {
-					respondWithError(w, http.StatusInternalServerError, "Failed to insert in database.")
+					respondWithError(w, http.StatusInternalServerError, dbInsertError)
 					return
 				}
 			}
@@ -152,22 +165,71 @@ func messages(database *gorm.DB) http.HandlerFunc {
 				return db
 			}).Limit(noMsgs).Find(&users)
 
-			var filtered_msgs []map[string]any
+			var filteredMsgs []map[string]any
 			for _, user := range users {
 				for _, message := range user.Messages {
-					filtered_msg := make(map[string]any)
-					filtered_msg["content"] = message.Text
-					filtered_msg["pub_date"] = message.Pub_date
-					filtered_msg["user"] = user.Username
-					filtered_msgs = append(filtered_msgs, filtered_msg)
+					filteredMsg := make(map[string]any)
+					filteredMsg["content"] = message.Text
+					filteredMsg["pub_date"] = message.Pub_date
+					filteredMsg["user"] = user.Username
+					filteredMsgs = append(filteredMsgs, filteredMsg)
 				}
 			}
-			respondWithSuccess(w, http.StatusOK, filtered_msgs)
+			respondWithSuccess(w, http.StatusOK, filteredMsgs)
 		}
 	}
 }
 
-func messages_per_user(database *gorm.DB) http.HandlerFunc {
+func messagesPerUserGET(w http.ResponseWriter, database *gorm.DB, username string, noMsgs int) {
+	userId, err := db.GormGetUserId(database, username)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, noUserFoundError)
+		return
+	}
+
+	var users []models.User
+	database.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
+		db := database.Order("pub_date DESC")
+		return db
+	}).Where("user_id = ?", userId).Limit(noMsgs).Find(&users)
+
+	var filteredMsgs []map[string]any
+	for _, user := range users {
+		for _, message := range user.Messages {
+			filteredMsg := make(map[string]any)
+			filteredMsg["content"] = message.Text
+			filteredMsg["pub_date"] = message.Pub_date
+			filteredMsg["user"] = user.Username
+			filteredMsgs = append(filteredMsgs, filteredMsg)
+		}
+	}
+	respondWithSuccess(w, http.StatusOK, filteredMsgs)
+}
+
+func messagesPerUserPOST(w http.ResponseWriter, r *http.Request, database *gorm.DB, username string) {
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, DecodeError)
+		return
+	}
+	content := req["content"]
+
+	userId, err := db.GormGetUserId(database, username)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, noUserFoundError)
+		return
+	}
+	message := models.Message{Author_id: uint(userId), Text: content.(string), Pub_date: time.Now().Unix()}
+
+	result := database.Create(&message)
+	if result.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, dbInsertError)
+		return
+	}
+	w.WriteHeader(204)
+}
+
+func messagesPerUser(database *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		updateLatest(r)
 
@@ -183,52 +245,60 @@ func messages_per_user(database *gorm.DB) http.HandlerFunc {
 		}
 
 		if r.Method == "GET" {
-			user_id, err := db.GormGetUserId(database, username)
-			if err != nil {
-				respondWithError(w, http.StatusNotFound, "User not found.")
-				return
-			}
+			messagesPerUserGET(w, database, username, noMsgs)
 
-			var users []models.User
-			database.Model(&models.User{}).Preload("Messages", "flagged = 0", func(database *gorm.DB) *gorm.DB {
-				db := database.Order("pub_date DESC")
-				return db
-			}).Where("user_id = ?", user_id).Limit(noMsgs).Find(&users)
-
-			var filtered_msgs []map[string]any
-			for _, user := range users {
-				for _, message := range user.Messages {
-					filtered_msg := make(map[string]any)
-					filtered_msg["content"] = message.Text
-					filtered_msg["pub_date"] = message.Pub_date
-					filtered_msg["user"] = user.Username
-					filtered_msgs = append(filtered_msgs, filtered_msg)
-				}
-			}
-			respondWithSuccess(w, http.StatusOK, filtered_msgs)
 		} else if r.Method == "POST" {
-			var req map[string]interface{}
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				respondWithError(w, http.StatusBadRequest, "Failed to decode request body.")
-				return
-			}
-			content := req["content"]
-
-			user_id, err := db.GormGetUserId(database, username)
-			if err != nil {
-				respondWithError(w, http.StatusNotFound, "User not found.")
-				return
-			}
-			message := models.Message{Author_id: uint(user_id), Text: content.(string), Pub_date: time.Now().Unix()}
-
-			result := database.Create(&message)
-			if result.Error != nil {
-				respondWithError(w, http.StatusInternalServerError, "Failed to insert in database.")
-				return
-			}
-			w.WriteHeader(204)
+			messagesPerUserPOST(w, r, database, username)
 		}
 	}
+}
+
+func followUser(database *gorm.DB, w http.ResponseWriter, curUserId int, toFollowUsername string) {
+	followsUsername := toFollowUsername
+	followsUserId, err := db.GormGetUserId(database, followsUsername)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, noUserFoundError)
+		return
+	}
+
+	follower := models.Follower{Who_id: curUserId, Whom_id: followsUserId}
+	result := database.Create(&follower)
+	if result.Error != nil {
+		respondWithError(w, http.StatusInternalServerError, dbInsertError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func unfollowUser(database *gorm.DB, w http.ResponseWriter, curUserId int, toUnfollowUsername string) {
+	unfollowsUsername := toUnfollowUsername
+	unfollowsUserId, err := db.GormGetUserId(database, unfollowsUsername)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, noUserFoundError)
+		return
+	}
+
+	err = database.Where("who_id=? AND whom_id=?", curUserId, unfollowsUserId).Delete(&models.Follower{}).Error
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete from database.")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
+func getFollowers(database *gorm.DB, w http.ResponseWriter, curUserId int, noMsgs int) {
+	var users []models.User
+	database.Model(&models.User{}).Preload("Followers").Where("user_id=?", curUserId).Limit(noMsgs).Find(&users)
+
+	var followerNames []string
+	for _, user := range users {
+		for _, follows := range user.Followers {
+			followerNames = append(followerNames, follows.Username)
+		}
+	}
+	followersResponse := map[string]any{"follows": followerNames}
+	respondWithSuccess(w, http.StatusOK, followersResponse)
 }
 
 func follow(database *gorm.DB) http.HandlerFunc {
@@ -241,9 +311,9 @@ func follow(database *gorm.DB) http.HandlerFunc {
 
 		vars := mux.Vars(r)
 		username := vars["username"]
-		user_id, err := db.GormGetUserId(database, username)
+		userId, err := db.GormGetUserId(database, username)
 		if err != nil {
-			respondWithError(w, http.StatusNotFound, "User not found.")
+			respondWithError(w, http.StatusNotFound, noUserFoundError)
 			return
 		}
 
@@ -254,52 +324,20 @@ func follow(database *gorm.DB) http.HandlerFunc {
 
 		var req map[string]string
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondWithError(w, http.StatusBadRequest, "Failed to decode request body.")
+			respondWithError(w, http.StatusBadRequest, DecodeError)
 			return
 		}
 
 		if r.Method == "POST" && req["follow"] != "" {
-			follows_username := req["follow"]
-			follows_user_id, err := db.GormGetUserId(database, follows_username)
-			if err != nil {
-				respondWithError(w, http.StatusNotFound, "User not found.")
-				return
-			}
+			followsUsername := req["follow"]
+			followUser(database, w, userId, followsUsername)
 
-			follower := models.Follower{Who_id: user_id, Whom_id: follows_user_id}
-			result := database.Create(&follower)
-			if result.Error != nil {
-				respondWithError(w, http.StatusInternalServerError, "Failed to insert in database.")
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
 		} else if r.Method == "POST" && req["unfollow"] != "" {
-			unfollows_username := req["unfollow"]
-			unfollows_user_id, err := db.GormGetUserId(database, unfollows_username)
-			if err != nil {
-				respondWithError(w, http.StatusNotFound, "User not found.")
-				return
-			}
-
-			err = database.Where("who_id=? AND whom_id=?", user_id, unfollows_user_id).Delete(&models.Follower{}).Error
-			if err != nil {
-				respondWithError(w, http.StatusInternalServerError, "Failed to delete from database.")
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
+			unfollowsUsername := req["unfollow"]
+			unfollowUser(database, w, userId, unfollowsUsername)
 
 		} else if r.Method == "GET" {
-			var users []models.User
-			database.Model(&models.User{}).Preload("Followers").Where("user_id=?", user_id).Limit(noMsgs).Find(&users)
-
-			var follower_names []string
-			for _, user := range users {
-				for _, follows := range user.Followers {
-					follower_names = append(follower_names, follows.Username)
-				}
-			}
-			followers_response := map[string]any{"follows": follower_names}
-			respondWithSuccess(w, http.StatusOK, followers_response)
+			getFollowers(database, w, userId, noMsgs)
 		}
 	}
 }
@@ -309,7 +347,7 @@ func main() {
 	//this MUST be called, otherwise tests fail
 	//seems grom cant read already existing database w/out migration stuff
 	db.AutoMigrateDB()
-	gorm_db := db.Gorm_ConnectDB()
+	gormDB := db.GormConnectDB()
 
 	r := mux.NewRouter()
 
@@ -320,11 +358,11 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	// Define routes
-	r.HandleFunc("/register", register(gorm_db)).Methods("POST")
+	r.HandleFunc("/register", register(gormDB)).Methods("POST")
 	r.HandleFunc("/latest", getLatest).Methods("GET")
-	r.HandleFunc("/msgs", messages(gorm_db)).Methods("GET")
-	r.HandleFunc("/msgs/{username}", messages_per_user(gorm_db)).Methods("GET", "POST")
-	r.HandleFunc("/fllws/{username}", follow(gorm_db)).Methods("GET", "POST")
+	r.HandleFunc("/msgs", messages(gormDB)).Methods("GET")
+	r.HandleFunc("/msgs/{username}", messagesPerUser(gormDB)).Methods("GET", "POST")
+	r.HandleFunc("/fllws/{username}", follow(gormDB)).Methods("GET", "POST")
 
 	// Start the server
 	fmt.Println("API is running on http://localhost:8081")

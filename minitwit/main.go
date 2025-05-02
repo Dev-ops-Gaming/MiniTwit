@@ -19,7 +19,7 @@ func main() {
 	//this MUST be called, otherwise tests fail
 	//seems grom cant read already existing database w/out migration stuff
 	db.AutoMigrateDB()
-	gorm_db := db.Gorm_ConnectDB()
+	gormDB := db.GormConnectDB()
 
 	// Routes
 	r := mux.NewRouter()
@@ -31,15 +31,15 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	// general routes
-	r.HandleFunc("/", handlers.TimelineHandler(gorm_db)).Methods("GET")
-	r.HandleFunc("/public", handlers.PublicTimelineHandler(gorm_db)).Methods("GET")
-	r.HandleFunc("/register", handlers.RegisterHandler(gorm_db)).Methods("GET", "POST")
-	r.HandleFunc("/login", handlers.LoginHandler(gorm_db)).Methods("GET", "POST")
+	r.HandleFunc("/", handlers.TimelineHandler(gormDB)).Methods("GET")
+	r.HandleFunc("/public", handlers.PublicTimelineHandler(gormDB)).Methods("GET")
+	r.HandleFunc("/register", handlers.RegisterHandler(gormDB)).Methods("GET", "POST")
+	r.HandleFunc("/login", handlers.LoginHandler(gormDB)).Methods("GET", "POST")
 	r.HandleFunc("/logout", handlers.LogoutHandler()).Methods("GET")
-	r.HandleFunc("/{username}", handlers.UserTimelineHandler(gorm_db)).Methods("GET")
-	r.HandleFunc("/{username}/follow", handlers.FollowHandler(gorm_db)).Methods("GET", "POST")
-	r.HandleFunc("/{username}/unfollow", handlers.UnfollowHandler(gorm_db)).Methods("GET", "POST")
-	r.HandleFunc("/add_message", handlers.AddMessageHandler(gorm_db)).Methods("POST")
+	r.HandleFunc("/{username}", handlers.UserTimelineHandler(gormDB)).Methods("GET")
+	r.HandleFunc("/{username}/follow", handlers.FollowHandler(gormDB)).Methods("GET", "POST")
+	r.HandleFunc("/{username}/unfollow", handlers.UnfollowHandler(gormDB)).Methods("GET", "POST")
+	r.HandleFunc("/add_message", handlers.AddMessageHandler(gormDB)).Methods("POST")
 
 	// Serve static files
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))

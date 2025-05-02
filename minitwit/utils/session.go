@@ -8,6 +8,9 @@ import (
 
 const SECRET_KEY = "development key"
 
+var sessionSaveError = "Failed to save session"
+var sessionGetError = "Failed to get session"
+
 var store *sessions.CookieStore
 
 func init() {
@@ -26,24 +29,24 @@ func init() {
 func AddFlash(w http.ResponseWriter, r *http.Request, message string) {
 	session, err := GetSession(r, w)
 	if err != nil {
-		http.Error(w, "Failed to get session", http.StatusInternalServerError)
+		http.Error(w, sessionGetError, http.StatusInternalServerError)
 		return
 	}
 	session.AddFlash(message)
 	if err := session.Save(r, w); err != nil {
-		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		http.Error(w, sessionSaveError, http.StatusInternalServerError)
 	}
 }
 
 func GetFlashes(w http.ResponseWriter, r *http.Request) []interface{} {
 	session, err := GetSession(r, w)
 	if err != nil {
-		http.Error(w, "Failed to get session", http.StatusInternalServerError)
+		http.Error(w, sessionGetError, http.StatusInternalServerError)
 		return nil
 	}
 	flashes := session.Flashes()
 	if err := session.Save(r, w); err != nil {
-		http.Error(w, "Failed to save session", http.StatusInternalServerError)
+		http.Error(w, sessionSaveError, http.StatusInternalServerError)
 		return nil
 	}
 	return flashes
@@ -56,7 +59,7 @@ func GetSession(r *http.Request, w http.ResponseWriter) (*sessions.Session, erro
 		// Handle invalid cookie case
 		session.Options.MaxAge = -1
 		if err := session.Save(r, w); err != nil {
-			http.Error(w, "Failed to save session", http.StatusInternalServerError)
+			http.Error(w, sessionSaveError, http.StatusInternalServerError)
 		}
 		http.Redirect(w, r, "/login", 419)
 	}
