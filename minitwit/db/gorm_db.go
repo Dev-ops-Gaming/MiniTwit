@@ -96,7 +96,7 @@ func queryMessages(db *gorm.DB, whereClause string, args ...interface{}) ([]mode
 func QueryTimeline(db *gorm.DB, userID int) ([]models.Message, error) {
 	// Get list of whom user is following
 	var followers []int
-	db.Model(&models.Follower{}).Where("Who_id = ?", userID).Select("whom_id").Find(&followers)
+	db.Model(&models.Follower{}).Where("Who_id = ?", userID).Select("whom_id").Find(&followers).Limit(32)
 
 	// Add current user to followers for the query
 	followersWithUser := append(followers, userID)

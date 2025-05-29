@@ -1,3 +1,4 @@
+[![Runs linter and tests](https://github.com/Dev-ops-Gaming/MiniTwit/actions/workflows/test.yml/badge.svg)](https://github.com/Dev-ops-Gaming/MiniTwit/actions/workflows/test.yml)
 # MiniTwit
 A project part of the DevOps course at the IT University of Copenhagen.
 

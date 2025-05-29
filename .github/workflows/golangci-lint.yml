@@ -1,4 +1,4 @@
-    name: Run golangci-lint tool
+    name: Run linter
 
     #on:
     #  push:
